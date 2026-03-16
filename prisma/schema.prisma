@@ -97,7 +97,7 @@ model User {
   registrations     Registration[]
   chatMessages      ChatMessage[]
   chatMemberships   ChatMember[]
-  refereeProfile    Referee?
+  refereeProfiles   Referee[]
   refereedGames     Game[]         @relation("GameReferee")
 
   @@index([email])
