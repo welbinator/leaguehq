@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { LeagueCard } from '@/components/league/LeagueCard';
 import { Button } from '@/components/ui/Button';
@@ -8,79 +8,71 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import type { League } from '@/types';
 
-// Mock data for scaffold — replace with real API calls
-const mockLeagues: League[] = [
-  {
-    id: '1',
-    name: 'Cedar Rapids Adult Soccer',
-    slug: 'cedar-rapids-soccer',
-    ownerId: 'user1',
-    sport: 'Soccer',
-    description: 'Competitive adult soccer league with 3 divisions. Spring and fall seasons.',
-    settings: {
-      rosterManagedBy: 'COACH',
-      minRosterSize: 11,
-      maxRosterSize: 20,
-      allowMultipleTeams: false,
-      refereesInApp: true,
-      pricingType: 'PER_PLAYER',
-    },
-    subscriptionTier: 'GROWTH',
-    subscriptionStatus: 'ACTIVE',
-    createdAt: new Date('2024-01-15'),
-    _count: { teams: 12, members: 180 },
-  },
-  {
-    id: '2',
-    name: 'Downtown Basketball League',
-    slug: 'downtown-basketball',
-    ownerId: 'user1',
-    sport: 'Basketball',
-    description: '5-on-5 recreational basketball. All skill levels welcome.',
-    settings: {
-      rosterManagedBy: 'CAPTAIN',
-      minRosterSize: 5,
-      maxRosterSize: 12,
-      allowMultipleTeams: false,
-      refereesInApp: false,
-      pricingType: 'PER_TEAM',
-    },
-    subscriptionTier: 'STARTER',
-    subscriptionStatus: 'ACTIVE',
-    createdAt: new Date('2024-03-01'),
-    _count: { teams: 8, members: 64 },
-  },
-];
-
 const SPORTS = [
   'Soccer', 'Basketball', 'Baseball', 'Football', 'Volleyball',
   'Tennis', 'Hockey', 'Softball', 'Lacrosse', 'Rugby', 'Other',
 ];
 
 export default function DashboardPage() {
-  const [leagues] = useState<League[]>(mockLeagues);
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newLeagueName, setNewLeagueName] = useState('');
   const [newLeagueSport, setNewLeagueSport] = useState('Soccer');
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchLeagues() {
+    try {
+      const res = await fetch('/api/leagues');
+      if (!res.ok) throw new Error('Failed to fetch leagues');
+      const json = await res.json();
+      setLeagues(json.data ?? []);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load leagues');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchLeagues();
+  }, []);
 
   async function handleCreateLeague(e: React.FormEvent) {
     e.preventDefault();
+    if (!newLeagueName.trim()) return;
     setCreating(true);
-    // TODO: implement API call to POST /api/leagues
-    setTimeout(() => {
-      setCreating(false);
+    setError(null);
+    try {
+      const res = await fetch('/api/leagues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newLeagueName.trim(), sport: newLeagueSport }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Failed to create league');
+      }
       setCreateModalOpen(false);
       setNewLeagueName('');
       setNewLeagueSport('Soccer');
-    }, 1000);
+      await fetchLeagues();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
+    }
   }
+
+  const totalTeams = leagues.reduce((sum, l) => sum + (l._count?.teams ?? 0), 0);
+  const totalPlayers = leagues.reduce((sum, l) => sum + (l._count?.members ?? 0), 0);
 
   return (
     <div className="flex min-h-screen bg-navy">
       <Sidebar />
 
-      {/* Main content */}
       <main className="flex-1 ml-64 p-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">
@@ -98,18 +90,21 @@ export default function DashboardPage() {
           </Button>
         </div>
 
+        {error && (
+          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Leagues', value: leagues.length, icon: '🏆' },
-            { label: 'Active Teams', value: leagues.reduce((sum, l) => sum + (l._count?.teams ?? 0), 0), icon: '👥' },
-            { label: 'Total Players', value: leagues.reduce((sum, l) => sum + (l._count?.members ?? 0), 0), icon: '🏃' },
+            { label: 'Total Leagues', value: loading ? '—' : leagues.length, icon: '🏆' },
+            { label: 'Active Teams', value: loading ? '—' : totalTeams, icon: '👥' },
+            { label: 'Total Players', value: loading ? '—' : totalPlayers, icon: '🏃' },
             { label: 'This Month', value: '$0', icon: '💳' },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-surface border border-white/[0.06] rounded-2xl p-5"
-            >
+            <div key={stat.label} className="bg-surface border border-white/[0.06] rounded-2xl p-5">
               <div className="text-2xl mb-2">{stat.icon}</div>
               <div className="text-2xl font-black text-white">{stat.value}</div>
               <div className="text-sm text-gray-400">{stat.label}</div>
@@ -118,13 +113,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Leagues grid */}
-        {leagues.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : leagues.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {leagues.map((league) => (
               <LeagueCard key={league.id} league={league} />
             ))}
-
-            {/* Create new league card */}
             <button
               onClick={() => setCreateModalOpen(true)}
               className="bg-surface border border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:border-accent/30 hover:bg-accent/5 transition-all duration-200 group min-h-[200px]"
@@ -160,14 +157,8 @@ export default function DashboardPage() {
         title="Create New League"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="create-league-form"
-              loading={creating}
-            >
+            <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+            <Button type="submit" form="create-league-form" loading={creating}>
               Create League
             </Button>
           </>
@@ -189,9 +180,7 @@ export default function DashboardPage() {
               className="w-full bg-navy border border-white/10 rounded-lg text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent hover:border-white/20 transition-all"
             >
               {SPORTS.map((s) => (
-                <option key={s} value={s} className="bg-navy">
-                  {s}
-                </option>
+                <option key={s} value={s} className="bg-navy">{s}</option>
               ))}
             </select>
           </div>
