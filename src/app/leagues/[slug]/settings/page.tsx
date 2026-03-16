@@ -1,4 +1,7 @@
+'use client';
+
 import { Card, CardHeader } from '@/components/ui/Card';
+import { LeagueNav } from '@/components/league/LeagueNav';
 import { Button } from '@/components/ui/Button';
 
 interface SettingsPageProps {
@@ -8,6 +11,7 @@ interface SettingsPageProps {
 export default function SettingsPage({ params }: SettingsPageProps) {
   return (
     <div className="min-h-screen bg-navy">
+      <LeagueNav slug={params.slug} />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="mb-8">
           <h2 className="text-2xl font-black text-white">League Settings</h2>

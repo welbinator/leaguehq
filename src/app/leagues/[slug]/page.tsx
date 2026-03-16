@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
+import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 
 const SPORT_EMOJI: Record<string, string> = {
@@ -32,14 +33,6 @@ export default function LeaguePage({ params }: LeaguePageProps) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const tabs = [
-    { label: 'Overview', href: `/leagues/${slug}` },
-    { label: 'Teams', href: `/leagues/${slug}/teams` },
-    { label: 'Schedule', href: `/leagues/${slug}/schedule` },
-    { label: 'Standings', href: `/leagues/${slug}/standings` },
-    { label: 'Settings', href: `/leagues/${slug}/settings` },
-  ];
-
   if (loading) {
     return (
       <div className="min-h-screen bg-navy flex items-center justify-center">
@@ -68,41 +61,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
 
   return (
     <div className="min-h-screen bg-navy">
-      {/* League header */}
-      <div className="bg-surface border-b border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-start gap-6">
-            <div className="w-16 h-16 bg-navy rounded-2xl flex items-center justify-center text-3xl border border-white/10 flex-shrink-0">
-              {league.logoUrl ? (
-                <img src={league.logoUrl} alt={league.name} className="w-full h-full object-cover rounded-2xl" />
-              ) : emoji}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-black text-white">{league.name}</h1>
-                <Badge variant="success" dot>Active</Badge>
-              </div>
-              <p className="text-gray-400">
-                {league.sport}
-                {teamCount > 0 && ` · ${teamCount} team${teamCount !== 1 ? 's' : ''}`}
-                {playerCount > 0 && ` · ${playerCount} player${playerCount !== 1 ? 's' : ''}`}
-              </p>
-            </div>
-          </div>
-
-          <nav className="flex gap-1 mt-6 overflow-x-auto">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-all whitespace-nowrap"
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </div>
+      <LeagueNav slug={slug} />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

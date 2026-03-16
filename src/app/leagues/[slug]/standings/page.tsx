@@ -1,4 +1,7 @@
+'use client';
+
 import { Card } from '@/components/ui/Card';
+import { LeagueNav } from '@/components/league/LeagueNav';
 import { Badge } from '@/components/ui/Badge';
 
 interface StandingsPageProps {
@@ -17,6 +20,7 @@ const mockStandings = [
 export default function StandingsPage({ params }: StandingsPageProps) {
   return (
     <div className="min-h-screen bg-navy">
+      <LeagueNav slug={params.slug} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-black text-white">Standings</h2>
