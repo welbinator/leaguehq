@@ -122,19 +122,6 @@ export default function DashboardPage() {
             {leagues.map((league) => (
               <LeagueCard key={league.id} league={league} />
             ))}
-            <button
-              onClick={() => setCreateModalOpen(true)}
-              className="bg-surface border border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:border-accent/30 hover:bg-accent/5 transition-all duration-200 group min-h-[200px]"
-            >
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-accent/10 rounded-xl flex items-center justify-center transition-colors">
-                <svg className="w-6 h-6 text-gray-400 group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
-                Create New League
-              </span>
-            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
