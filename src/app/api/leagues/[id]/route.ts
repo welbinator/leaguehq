@@ -60,3 +60,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
   });
 }
+
+// PATCH /api/leagues/[id]
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { name, sport, description, settings } = await req.json();
+
+  const league = await prisma.league.update({
+    where: { id: params.id },
+    data: {
+      ...(name && { name }),
+      ...(sport && { sport }),
+      ...(description !== undefined && { description }),
+      ...(settings && { settings }),
+    },
+  });
+
+  return NextResponse.json({ data: league });
+}
