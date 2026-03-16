@@ -69,6 +69,11 @@ enum TeamMemberStatus {
   INACTIVE
 }
 
+enum PricingType {
+  PER_PLAYER
+  PER_TEAM
+}
+
 enum ChatRoomType {
   TEAM
   LEAGUE
@@ -145,35 +150,56 @@ model Division {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  league        League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  teams         Team[]
-  games         Game[]
-  registrations Registration[]
+  league          League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  seasonDivisions SeasonDivision[]
+  teams           Team[]
+  games           Game[]
+  registrations   Registration[]
 
   @@index([leagueId])
   @@index([leagueId, order])
 }
 
 model Season {
-  id               String       @id @default(cuid())
-  leagueId         String
-  name             String
-  startDate        DateTime
-  endDate          DateTime
-  registrationOpen Boolean      @default(false)
-  price            Decimal      @db.Decimal(10, 2)
-  status           SeasonStatus @default(UPCOMING)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  leagueId          String
+  name              String
+  startDate         DateTime
+  endDate           DateTime
+  registrationOpen  Boolean      @default(false)
+  paymentRequired   Boolean      @default(true)
+  paymentDueDate    DateTime?
+  status            SeasonStatus @default(UPCOMING)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   // Relations
-  league        League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  teams         Team[]
-  games         Game[]
-  registrations Registration[]
+  league          League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  seasonDivisions SeasonDivision[]
+  teams           Team[]
+  games           Game[]
+  registrations   Registration[]
 
   @@index([leagueId])
   @@index([leagueId, status])
+}
+
+model SeasonDivision {
+  id          String      @id @default(cuid())
+  seasonId    String
+  divisionId  String
+  price       Decimal     @db.Decimal(10, 2)
+  pricingType PricingType @default(PER_PLAYER)
+  maxTeams    Int?
+  createdAt   DateTime    @default(now())
+
+  // Relations
+  season   Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  division Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, divisionId])
+  @@index([seasonId])
+  @@index([divisionId])
 }
 
 model Team {
@@ -264,7 +290,7 @@ model Registration {
   divisionId            String?
   status                RegistrationStatus @default(PENDING)
   paidAt                DateTime?
-  amount                Decimal            @db.Decimal(10, 2)
+  amount                Decimal?           @db.Decimal(10, 2)
   stripePaymentIntentId String?
   notes                 String?
   createdAt             DateTime           @default(now())
