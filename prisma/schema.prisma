@@ -1,0 +1,350 @@
+// This file is required for Prisma Client to work with Next.js
+// https://www.prisma.io/docs/guides/database/troubleshooting-orm/help-articles/nextjs-prisma-client-dev-practices
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  LEAGUE_ADMIN
+  COACH
+  CAPTAIN
+  PLAYER
+  REFEREE
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  UNPAID
+}
+
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum GameStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WAITLISTED
+}
+
+enum TeamMemberRole {
+  COACH
+  CAPTAIN
+  PLAYER
+}
+
+enum TeamMemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ChatRoomType {
+  TEAM
+  LEAGUE
+  CUSTOM
+}
+
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(PLAYER)
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedLeagues      League[]       @relation("LeagueOwner")
+  coachedTeams      Team[]         @relation("TeamCoach")
+  captainedTeams    Team[]         @relation("TeamCaptain")
+  teamMemberships   TeamMember[]
+  registrations     Registration[]
+  chatMessages      ChatMessage[]
+  chatMemberships   ChatMember[]
+  refereeProfile    Referee?
+  refereedGames     Game[]         @relation("GameReferee")
+
+  @@index([email])
+  @@index([role])
+}
+
+model League {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  ownerId            String
+  logoUrl            String?
+  sport              String
+  description        String?
+  settings           Json               @default("{}")
+  subscriptionTier   SubscriptionTier   @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId   String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  owner         User           @relation("LeagueOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  divisions     Division[]
+  seasons       Season[]
+  teams         Team[]
+  games         Game[]
+  registrations Registration[]
+  chatRooms     ChatRoom[]
+  referees      Referee[]
+
+  @@index([slug])
+  @@index([ownerId])
+  @@index([sport])
+}
+
+model Division {
+  id          String   @id @default(cuid())
+  leagueId    String
+  name        String
+  description String?
+  order       Int      @default(0)
+  price       Decimal? @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  league        League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  teams         Team[]
+  games         Game[]
+  registrations Registration[]
+
+  @@index([leagueId])
+  @@index([leagueId, order])
+}
+
+model Season {
+  id               String       @id @default(cuid())
+  leagueId         String
+  name             String
+  startDate        DateTime
+  endDate          DateTime
+  registrationOpen Boolean      @default(false)
+  price            Decimal      @db.Decimal(10, 2)
+  status           SeasonStatus @default(UPCOMING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  league        League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  teams         Team[]
+  games         Game[]
+  registrations Registration[]
+
+  @@index([leagueId])
+  @@index([leagueId, status])
+}
+
+model Team {
+  id         String   @id @default(cuid())
+  leagueId   String
+  divisionId String?
+  seasonId   String?
+  name       String
+  logoUrl    String?
+  coachId    String?
+  captainId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  league        League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  division      Division?      @relation(fields: [divisionId], references: [id])
+  season        Season?        @relation(fields: [seasonId], references: [id])
+  coach         User?          @relation("TeamCoach", fields: [coachId], references: [id])
+  captain       User?          @relation("TeamCaptain", fields: [captainId], references: [id])
+  members       TeamMember[]
+  homeGames     Game[]         @relation("HomeTeam")
+  awayGames     Game[]         @relation("AwayTeam")
+  registrations Registration[]
+  chatRooms     ChatRoom[]
+
+  @@index([leagueId])
+  @@index([divisionId])
+  @@index([seasonId])
+}
+
+model TeamMember {
+  id       String           @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamMemberRole   @default(PLAYER)
+  joinedAt DateTime         @default(now())
+  status   TeamMemberStatus @default(ACTIVE)
+
+  // Relations
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Game {
+  id          String     @id @default(cuid())
+  leagueId    String
+  seasonId    String
+  divisionId  String?
+  homeTeamId  String
+  awayTeamId  String
+  scheduledAt DateTime
+  location    String?
+  homeScore   Int?
+  awayScore   Int?
+  status      GameStatus @default(SCHEDULED)
+  refereeId   String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  league   League    @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season   Season    @relation(fields: [seasonId], references: [id])
+  division Division? @relation(fields: [divisionId], references: [id])
+  homeTeam Team      @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam Team      @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  referee  User?     @relation("GameReferee", fields: [refereeId], references: [id])
+
+  @@index([leagueId])
+  @@index([seasonId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+}
+
+model Registration {
+  id                    String             @id @default(cuid())
+  leagueId              String
+  seasonId              String
+  userId                String
+  teamId                String?
+  divisionId            String?
+  status                RegistrationStatus @default(PENDING)
+  paidAt                DateTime?
+  amount                Decimal            @db.Decimal(10, 2)
+  stripePaymentIntentId String?
+  notes                 String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  // Relations
+  league   League    @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season   Season    @relation(fields: [seasonId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+  team     Team?     @relation(fields: [teamId], references: [id])
+  division Division? @relation(fields: [divisionId], references: [id])
+
+  @@index([leagueId])
+  @@index([seasonId])
+  @@index([userId])
+  @@index([status])
+}
+
+model ChatRoom {
+  id          String       @id @default(cuid())
+  leagueId    String
+  name        String
+  type        ChatRoomType @default(CUSTOM)
+  teamId      String?
+  autoAddRule Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  league   League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team     Team?         @relation(fields: [teamId], references: [id])
+  messages ChatMessage[]
+  members  ChatMember[]
+
+  @@index([leagueId])
+  @@index([teamId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id])
+
+  @@index([roomId])
+  @@index([roomId, createdAt])
+}
+
+model ChatMember {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  // Relations
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+}
+
+model Referee {
+  id                 String  @id @default(cuid())
+  userId             String
+  leagueId           String
+  certificationLevel String?
+  available          Boolean @default(true)
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leagueId])
+  @@index([leagueId])
+  @@index([available])
+}
