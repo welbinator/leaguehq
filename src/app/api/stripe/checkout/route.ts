@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
         ],
         success_url: `${origin}/leagues/${registration.league.id}?payment=success`,
         cancel_url: `${origin}/leagues/${registration.league.id}?payment=cancelled`,
+        allow_promotion_codes: true,
         metadata: {
           registrationId,
           userId,
