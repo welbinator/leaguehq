@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
@@ -16,16 +16,19 @@
   }
 
   body {
-    @apply bg-navy text-white antialiased;
+    background-color: #0f172a;
+    color: white;
     font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
   * {
-    @apply box-border;
+    box-sizing: border-box;
   }
 
   ::selection {
-    @apply bg-accent/30 text-white;
+    background-color: rgba(34, 197, 94, 0.3);
+    color: white;
   }
 
   ::-webkit-scrollbar {
@@ -34,42 +37,37 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-navy;
+    background-color: #0f172a;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-light rounded-full;
+    background-color: #334155;
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
+    background-color: #6b7280;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent;
+    background: linear-gradient(to right, white, #9ca3af);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .text-gradient-green {
-    @apply bg-gradient-to-r from-accent to-accent-light bg-clip-text text-transparent;
+    background: linear-gradient(to right, #22c55e, #4ade80);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
-  }
-
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
