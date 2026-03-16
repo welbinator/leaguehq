@@ -3,8 +3,6 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import stripe from '@/lib/stripe';
 
-// Stripe requires the raw body to verify the webhook signature
-export const config = { api: { bodyParser: false } };
 
 const TIER_MAP: Record<string, 'STARTER' | 'GROWTH' | 'PRO'> = {
   [process.env.STRIPE_PRICE_STARTER ?? '']: 'STARTER',
