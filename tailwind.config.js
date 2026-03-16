@@ -5,6 +5,14 @@ module.exports = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    { pattern: /^bg-(navy|surface|accent)/ },
+    { pattern: /^text-(navy|surface|accent)/ },
+    { pattern: /^border-(navy|surface|accent)/ },
+    { pattern: /^shadow-(navy|surface|accent)/ },
+    { pattern: /^hover:bg-(navy|surface|accent)/ },
+    { pattern: /^hover:text-(navy|surface|accent)/ },
+  ],
   theme: {
     extend: {
       colors: {
