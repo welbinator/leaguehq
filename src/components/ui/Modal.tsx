@@ -56,7 +56,7 @@ export function Modal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
         className={`
-          relative w-full ${sizeClasses[size]}
+          relative w-full ${sizeClasses[size]} flex flex-col max-h-[90vh]
           bg-surface border border-white/10 rounded-2xl shadow-2xl
           animate-slide-up
         `}
@@ -75,7 +75,7 @@ export function Modal({
         </div>
 
         {/* Body */}
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1">{children}</div>
 
         {/* Footer */}
         {footer && (
