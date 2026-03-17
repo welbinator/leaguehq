@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
+import { CreateSeasonModal } from '@/components/league/CreateSeasonModal';
 
 const SPORT_EMOJI: Record<string, string> = {
   Soccer: '⚽', Basketball: '🏀', Baseball: '⚾', Football: '🏈',
@@ -20,6 +21,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
   const { slug } = params;
   const [league, setLeague] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -98,9 +100,9 @@ export default function LeaguePage({ params }: LeaguePageProps) {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-400 text-sm mb-3">No seasons created yet.</p>
-                  <Link href={`/leagues/${slug}/settings`} className="text-accent text-sm hover:underline">
+                  <button onClick={() => setSeasonModalOpen(true)} className="text-accent text-sm hover:underline">
                     Create your first season →
-                  </Link>
+                  </button>
                 </div>
               )}
             </Card>
@@ -176,6 +178,20 @@ export default function LeaguePage({ params }: LeaguePageProps) {
           </div>
         </div>
       </div>
+
+      {league && (
+        <CreateSeasonModal
+          isOpen={seasonModalOpen}
+          onClose={() => setSeasonModalOpen(false)}
+          leagueId={league.id}
+          slug={slug}
+          onCreated={() => {
+            setSeasonModalOpen(false);
+            // Reload league data
+            fetch(`/api/leagues/${slug}`).then(r => r.json()).then(json => { if (json.data) setLeague(json.data); });
+          }}
+        />
+      )}
     </div>
   );
 }

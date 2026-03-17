@@ -28,7 +28,15 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { leagueId, name, startDate, endDate, registrationOpen, paymentRequired, paymentDueDate, divisions } = body;
+  const {
+    leagueId, name, startDate, endDate,
+    registrationOpen, paymentRequired, paymentDueDate,
+    // inlineDivisions: create divisions + season_divisions in one shot
+    // [{name, price, pricingType, isDefault?}]
+    inlineDivisions,
+    // legacy: pre-existing division IDs
+    divisions,
+  } = body;
 
   if (!leagueId || !name || !startDate || !endDate) {
     return NextResponse.json({ error: 'leagueId, name, startDate, endDate are required' }, { status: 400 });
@@ -42,17 +50,40 @@ export async function POST(req: NextRequest) {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         registrationOpen: registrationOpen ?? false,
-        paymentRequired: paymentRequired ?? true,
+        paymentRequired: paymentRequired ?? false,
         paymentDueDate: paymentDueDate ? new Date(paymentDueDate) : null,
       },
     });
 
+    // inlineDivisions: create the Division records, then link via SeasonDivision
+    if (inlineDivisions?.length) {
+      for (let i = 0; i < inlineDivisions.length; i++) {
+        const d = inlineDivisions[i];
+        const div = await tx.division.create({
+          data: {
+            leagueId,
+            name: d.name ?? 'General',
+            order: i,
+          },
+        });
+        await tx.seasonDivision.create({
+          data: {
+            seasonId: s.id,
+            divisionId: div.id,
+            price: d.price ?? 0,
+            pricingType: d.pricingType ?? 'PER_PLAYER',
+          },
+        });
+      }
+    }
+
+    // legacy: pre-existing division IDs
     if (divisions?.length) {
       await tx.seasonDivision.createMany({
         data: divisions.map((d: any) => ({
           seasonId: s.id,
           divisionId: d.divisionId,
-          price: d.price,
+          price: d.price ?? 0,
           pricingType: d.pricingType ?? 'PER_PLAYER',
         })),
       });
