@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   if (league.stripeConnectAccountId) {
     try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' });
       await stripe.oauth.deauthorize({
         client_id: process.env.STRIPE_CONNECT_CLIENT_ID!,
         stripe_user_id: league.stripeConnectAccountId,
