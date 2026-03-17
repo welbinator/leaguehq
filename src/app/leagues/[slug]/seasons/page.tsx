@@ -48,12 +48,12 @@ function formatDate(d: string) {
 
 function priceLabel(season: Season) {
   if (!season.paymentRequired) return 'Free';
-  const sd = season.seasonDivisions?.[0];
-  if (!sd) return 'Paid';
-  const amount = parseFloat(String(sd.price)) || 0;
-  const per = sd.pricingType === 'PER_PLAYER' ? 'player' : 'team';
-  if (season.seasonDivisions.length > 1) return `$${amount}+ / ${per}`;
-  return `$${amount} / ${per}`;
+  if (!season.seasonDivisions?.length) return 'Paid';
+  const prices = season.seasonDivisions.map(sd => parseFloat(String(sd.price)) || 0);
+  const min = Math.min(...prices);
+  const per = season.seasonDivisions[0].pricingType === 'PER_PLAYER' ? 'player' : 'team';
+  if (season.seasonDivisions.length > 1) return `$${min}+ / ${per}`;
+  return `$${min} / ${per}`;
 }
 
 function classifySeasons(seasons: Season[]) {
