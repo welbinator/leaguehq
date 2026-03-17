@@ -36,6 +36,7 @@ export function LeagueNav({ slug }: { slug: string }) {
     { label: 'Teams', href: `/leagues/${slug}/teams` },
     { label: 'Schedule', href: `/leagues/${slug}/schedule` },
     { label: 'Standings', href: `/leagues/${slug}/standings` },
+    { label: 'Seasons', href: `/leagues/${slug}/seasons` },
     { label: 'Settings', href: `/leagues/${slug}/settings` },
   ];
 
