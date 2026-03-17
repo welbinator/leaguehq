@@ -80,7 +80,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
           {/* Main */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
-              <h2 className="text-xl font-bold text-white mb-4">Current Season</h2>
+              <h2 className="text-xl font-bold text-white mb-4">Current/Upcoming Season</h2>
               {currentSeason ? (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-3 border-b border-white/[0.06]">
