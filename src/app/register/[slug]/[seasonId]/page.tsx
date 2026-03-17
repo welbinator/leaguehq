@@ -78,6 +78,25 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error);
+
+      const registrationId = json.data.id;
+
+      // If payment is required, redirect to Stripe Checkout
+      if (season.paymentRequired) {
+        const checkoutRes = await fetch('/api/stripe/checkout/registration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registrationId }),
+        });
+        const checkoutJson = await checkoutRes.json();
+        if (checkoutJson.url) {
+          window.location.href = checkoutJson.url;
+          return;
+        }
+        // If checkout fails, still show success but warn
+        console.error('Checkout error:', checkoutJson.error);
+      }
+
       setSubmitted(true);
     } catch (e: any) {
       setError(e.message);
@@ -110,15 +129,27 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
     ? (teamMode === 'new' ? teamName : existingTeams.find(t => t.id === selectedTeamId)?.name ?? '')
     : existingTeams.find(t => t.id === selectedTeamId)?.name ?? '';
 
-  if (submitted) {
+  // Handle return from Stripe payment
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const paymentSuccess = searchParams?.get('payment') === 'success';
+  const paymentCancelled = searchParams?.get('payment') === 'cancelled';
+
+  if (submitted || paymentSuccess) {
     return (
       <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-2xl font-black text-white mb-2">You're registered!</h1>
+          <h1 className="text-2xl font-black text-white mb-2">
+            {paymentSuccess ? 'Payment confirmed!' : "You're registered!"}
+          </h1>
           <p className="text-gray-400 mb-1">
-            <span className="text-white font-medium">{playerName}</span> has been added to{' '}
-            <span className="text-white font-medium">{resolvedTeamName || season?.name}</span>.
+            {paymentSuccess
+              ? 'Your payment was successful and your registration is confirmed.'
+              : <>
+                  <span className="text-white font-medium">{playerName}</span> has been added to{' '}
+                  <span className="text-white font-medium">{resolvedTeamName || season?.name}</span>.
+                </>
+            }
           </p>
           <p className="text-gray-500 text-sm mt-4">
             The league director will be in touch with next steps.

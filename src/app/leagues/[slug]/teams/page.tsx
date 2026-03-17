@@ -1,132 +1,209 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TeamCard } from '@/components/league/TeamCard';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
 import { LeagueNav } from '@/components/league/LeagueNav';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 
-interface TeamsPageProps {
-  params: { slug: string };
+interface TeamReg {
+  id: string;
+  teamName: string;
+  captainName: string;
+  captainEmail: string;
+  captainPhone: string | null;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+  season: { id: string; name: string };
+  seasonDivision: { division: { name: string } } | null;
 }
 
-export default function TeamsPage({ params }: TeamsPageProps) {
+export default function TeamsPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const [leagueId, setLeagueId] = useState<string | null>(null);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<TeamReg[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  async function fetchData() {
-    try {
-      // Get league id from slug
-      const leagueRes = await fetch(`/api/leagues/${slug}`);
-      const leagueJson = await leagueRes.json();
-      if (leagueJson.error) throw new Error(leagueJson.error);
-      const id = leagueJson.data.id;
-      setLeagueId(id);
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
-      // Get teams for this league
-      const teamsRes = await fetch(`/api/teams?leagueId=${id}`);
-      const teamsJson = await teamsRes.json();
-      if (teamsJson.error) throw new Error(teamsJson.error);
-      setTeams(teamsJson.data ?? []);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  async function loadData() {
+    const leagueRes = await fetch(`/api/leagues/${slug}`);
+    const leagueJson = await leagueRes.json();
+    if (leagueJson.error) return;
+    const id = leagueJson.data.id;
+    setLeagueId(id);
+
+    const regRes = await fetch(`/api/team-registrations?leagueId=${id}`);
+    const regJson = await regRes.json();
+    setRegistrations(regJson.data ?? []);
+    setLoading(false);
   }
 
-  useEffect(() => { fetchData(); }, [slug]);
+  useEffect(() => { loadData(); }, [slug]);
 
-  async function handleCreateTeam(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newTeamName.trim() || !leagueId) return;
-    setCreating(true);
-    try {
-      const res = await fetch('/api/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTeamName.trim(), leagueId }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'Failed to create team');
-      }
-      setCreateModalOpen(false);
-      setNewTeamName('');
-      await fetchData();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setCreating(false);
+  async function updateStatus(id: string, status: string) {
+    setUpdating(id);
+    const res = await fetch(`/api/team-registrations?id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const json = await res.json();
+    if (json.data) {
+      setRegistrations(regs => regs.map(r => r.id === id ? { ...r, status: json.data.status } : r));
+      showToast(`Team ${status.toLowerCase()}`);
     }
+    setUpdating(null);
   }
+
+  const filtered = filter === 'ALL' ? registrations : registrations.filter(r => r.status === filter);
+  const counts = {
+    ALL: registrations.length,
+    PENDING: registrations.filter(r => r.status === 'PENDING').length,
+    APPROVED: registrations.filter(r => r.status === 'APPROVED').length,
+    REJECTED: registrations.filter(r => r.status === 'REJECTED').length,
+  };
+
+  const statusVariant: Record<string, 'warning' | 'success' | 'danger' | 'default'> = {
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger',
+  };
 
   return (
     <div className="min-h-screen bg-navy">
       <LeagueNav slug={slug} />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-black text-white">Teams</h2>
-            <p className="text-gray-400">
-              {loading ? 'Loading…' : `${teams.length} team${teams.length !== 1 ? 's' : ''} registered`}
-            </p>
-          </div>
-          <Button onClick={() => setCreateModalOpen(true)}>Add Team</Button>
+
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-accent text-navy font-semibold px-4 py-2 rounded-lg shadow-lg text-sm">
+          {toast}
+        </div>
+      )}
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-black text-white">Team Registrations</h1>
+          <p className="text-gray-400 text-sm mt-0.5">{registrations.length} registration{registrations.length !== 1 ? 's' : ''} total</p>
         </div>
 
-        {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">{error}</div>
-        )}
+        {/* Filter tabs */}
+        <div className="flex gap-1 bg-surface rounded-xl p-1 mb-6 w-fit">
+          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                filter === f ? 'bg-accent text-navy shadow' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
+              {counts[f] > 0 && (
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${filter === f ? 'bg-navy/30 text-navy' : 'bg-white/10 text-gray-300'}`}>
+                  {counts[f]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-24">
+          <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : teams.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teams.map((team) => (
-              <TeamCard key={team.id} team={{ ...team, leagueSlug: slug }} />
-            ))}
-          </div>
+        ) : filtered.length === 0 ? (
+          <Card>
+            <div className="text-center py-10">
+              <div className="text-4xl mb-3">🏆</div>
+              <p className="text-gray-400 text-sm">
+                {filter === 'ALL' ? 'No registrations yet. Share your registration link to get teams signed up.' : `No ${filter.toLowerCase()} registrations.`}
+              </p>
+            </div>
+          </Card>
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="text-5xl mb-4">👥</div>
-            <h3 className="text-xl font-bold text-white mb-2">No teams yet</h3>
-            <p className="text-gray-400 mb-6">Add your first team to get started.</p>
-            <Button onClick={() => setCreateModalOpen(true)}>Add Team</Button>
+          <div className="space-y-3">
+            {filtered.map(reg => (
+              <Card key={reg.id}>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap mb-2">
+                      <h3 className="text-base font-bold text-white">{reg.teamName}</h3>
+                      <Badge variant={statusVariant[reg.status] ?? 'default'} dot>
+                        {reg.status.charAt(0) + reg.status.slice(1).toLowerCase()}
+                      </Badge>
+                      {reg.seasonDivision && (
+                        <span className="text-xs text-gray-400 bg-white/5 px-2 py-0.5 rounded-full">
+                          {reg.seasonDivision.division.name}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm">
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Captain</span>
+                        <span className="text-gray-200">{reg.captainName}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Email</span>
+                        <a href={`mailto:${reg.captainEmail}`} className="text-accent hover:underline text-sm">{reg.captainEmail}</a>
+                      </div>
+                      {reg.captainPhone && (
+                        <div>
+                          <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Phone</span>
+                          <span className="text-gray-200">{reg.captainPhone}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Season</span>
+                        <span className="text-gray-200">{reg.season.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Registered</span>
+                        <span className="text-gray-200">{new Date(reg.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+
+                    {reg.notes && (
+                      <p className="text-xs text-gray-400 mt-2 bg-white/5 rounded-lg px-3 py-2">{reg.notes}</p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  {reg.status === 'PENDING' && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => updateStatus(reg.id, 'APPROVED')}
+                        disabled={updating === reg.id}
+                        className="text-xs font-medium text-accent border border-accent/30 hover:bg-accent/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => updateStatus(reg.id, 'REJECTED')}
+                        disabled={updating === reg.id}
+                        className="text-xs font-medium text-red-400 border border-red-500/20 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                  {reg.status === 'APPROVED' && (
+                    <button
+                      onClick={() => updateStatus(reg.id, 'REJECTED')}
+                      disabled={updating === reg.id}
+                      className="text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50 flex-shrink-0"
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </div>
-
-      <Modal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Add Team"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-            <Button type="submit" form="create-team-form" loading={creating}>Add Team</Button>
-          </>
-        }
-      >
-        <form id="create-team-form" onSubmit={handleCreateTeam} className="space-y-4">
-          <Input
-            label="Team Name"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            placeholder="e.g. Lightning FC"
-            required
-          />
-        </form>
-      </Modal>
     </div>
   );
 }
