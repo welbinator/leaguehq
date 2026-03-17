@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
   // Create an account link for onboarding
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${appUrl}/leagues/${league.slug}/settings?connect_refresh=1`,
-    return_url: `${appUrl}/leagues/${league.slug}/settings?connect_success=1`,
+    refresh_url: `${appUrl}/settings?connect_refresh=1`,
+    return_url: `${appUrl}/settings?league=${leagueId}&connect_success=1`,
     type: 'account_onboarding',
   });
 
