@@ -1,29 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import Stripe from 'stripe';
 
-// GET /api/stripe/connect?leagueId=...
-// Redirects league director to Stripe Connect OAuth flow
-export async function GET(req: NextRequest) {
+// POST /api/stripe/connect { leagueId }
+// Creates a Stripe connected account (if not exists) and returns an onboarding URL
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const leagueId = req.nextUrl.searchParams.get('leagueId');
-  if (!leagueId) return NextResponse.json({ error: 'leagueId required' }, { status: 400 });
-
-  const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
+  const { leagueId } = await req.json();
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://leaguehq.club';
 
-  if (!clientId) return NextResponse.json({ error: 'Stripe Connect not configured' }, { status: 500 });
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    scope: 'read_write',
-    redirect_uri: `${appUrl}/api/stripe/connect/callback`,
-    state: leagueId, // pass leagueId through OAuth state
-    'stripe_user[business_type]': 'individual',
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { id: true, ownerId: true, slug: true, stripeConnectAccountId: true },
   });
 
-  return NextResponse.redirect(`https://connect.stripe.com/oauth/authorize?${params.toString()}`);
+  if (!league || league.ownerId !== (session.user as any).id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+
+  let accountId = league.stripeConnectAccountId;
+
+  // Create a new connected account if one doesn't exist yet
+  if (!accountId) {
+    const account = await stripe.accounts.create({ type: 'express' });
+    accountId = account.id;
+    await prisma.league.update({
+      where: { id: leagueId },
+      data: { stripeConnectAccountId: accountId },
+    });
+  }
+
+  // Create an account link for onboarding
+  const accountLink = await stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: `${appUrl}/leagues/${league.slug}/settings?connect_refresh=1`,
+    return_url: `${appUrl}/leagues/${league.slug}/settings?connect_success=1`,
+    type: 'account_onboarding',
+  });
+
+  return NextResponse.json({ url: accountLink.url });
 }

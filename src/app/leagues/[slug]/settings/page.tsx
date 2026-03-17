@@ -22,6 +22,8 @@ export default function SettingsPage({ params }: { params: { slug: string } }) {
   const [leagueSport, setLeagueSport] = useState('');
   const [leagueDesc, setLeagueDesc] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [stripeStatus, setStripeStatus] = useState<any>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
 
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
 
@@ -40,6 +42,9 @@ export default function SettingsPage({ params }: { params: { slug: string } }) {
       setLeagueSport(leagueJson.data.sport);
       setLeagueDesc(leagueJson.data.description ?? '');
       const seasonsRes = await fetch(`/api/seasons?leagueId=${leagueJson.data.id}`);
+      const stripeRes = await fetch(`/api/stripe/connect/status?leagueId=${leagueJson.data.id}`);
+      const stripeJson = await stripeRes.json();
+      setStripeStatus(stripeJson);
       const seasonsJson = await seasonsRes.json();
       setSeasons(seasonsJson.data ?? []);
     }
@@ -147,12 +152,14 @@ export default function SettingsPage({ params }: { params: { slug: string } }) {
         </Card>
 
 
-        {/* Payments */}
+                {/* Payments */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <CardHeader title="Payments" subtitle="Connect a payment account to collect registration fees" />
+            <CardHeader title="Payments" subtitle="Connect Stripe to collect registration fees from players" />
           </div>
-          {league?.stripeConnectAccountId ? (
+
+          {stripeStatus?.complete ? (
+            /* Fully onboarded */
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-4 bg-accent/5 border border-accent/20 rounded-xl">
                 <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -162,7 +169,11 @@ export default function SettingsPage({ params }: { params: { slug: string } }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white">Stripe Connected</div>
-                  <div className="text-xs text-gray-400 truncate">{league.stripeConnectAccountId}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {stripeStatus.chargesEnabled ? '✓ Charges enabled' : '⚠ Charges not yet enabled'}
+                    {' · '}
+                    {stripeStatus.payoutsEnabled ? '✓ Payouts enabled' : '⚠ Payouts pending'}
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-gray-500">Registration payments will go directly to your Stripe account. LeagueHQ charges a small platform fee per transaction.</p>
@@ -183,22 +194,63 @@ export default function SettingsPage({ params }: { params: { slug: string } }) {
                 Disconnect Stripe
               </Button>
             </div>
+          ) : stripeStatus?.connected ? (
+            /* Account created but onboarding incomplete */
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+                <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-white">Setup Incomplete</div>
+                  <div className="text-xs text-gray-400 mt-0.5">Finish setting up your Stripe account to collect payments</div>
+                </div>
+              </div>
+              <Button
+                loading={connectLoading}
+                onClick={async () => {
+                  setConnectLoading(true);
+                  const res = await fetch('/api/stripe/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leagueId: league.id }),
+                  });
+                  const json = await res.json();
+                  setConnectLoading(false);
+                  if (json.url) window.location.href = json.url;
+                }}
+              >
+                Continue Stripe Setup
+              </Button>
+            </div>
           ) : (
+            /* Not connected */
             <div className="space-y-4">
               <p className="text-sm text-gray-400">Connect your Stripe account so players can pay registration fees directly to you when they sign up.</p>
-              <a
-                href={'/api/stripe/connect?leagueId=' + league?.id}
-                className="inline-flex items-center gap-2 bg-[#635BFF] text-white font-semibold px-4 py-2.5 rounded-xl text-sm hover:bg-[#5851e6] transition-colors"
+              <Button
+                loading={connectLoading}
+                onClick={async () => {
+                  setConnectLoading(true);
+                  const res = await fetch('/api/stripe/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leagueId: league.id }),
+                  });
+                  const json = await res.json();
+                  setConnectLoading(false);
+                  if (json.url) window.location.href = json.url;
+                  else showToast('Error starting Stripe setup');
+                }}
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" />
-                </svg>
                 Connect with Stripe
-              </a>
-              <p className="text-xs text-gray-500">You will be redirected to Stripe to authorize the connection. No Stripe account? You can create one during setup.</p>
+              </Button>
+              <p className="text-xs text-gray-500">You'll be redirected to Stripe to set up your account. No Stripe account? You can create one during setup.</p>
             </div>
           )}
         </Card>
+
         {/* Danger Zone */}
         <Card>
           <CardHeader title="Danger Zone" subtitle="Irreversible actions" />
