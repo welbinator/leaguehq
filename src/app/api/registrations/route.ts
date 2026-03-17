@@ -22,8 +22,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please select a team to join' }, { status: 400 });
   }
 
-  const season = await prisma.season.findUnique({ where: { id: seasonId }, select: { id: true } });
+  const season = await prisma.season.findUnique({ where: { id: seasonId }, select: { id: true, registrationOpen: true } });
   if (!season) return NextResponse.json({ error: 'Season not found' }, { status: 404 });
+  if (!season.registrationOpen) return NextResponse.json({ error: 'Registration is not currently open for this season.' }, { status: 403 });
 
   // Resolve team name: new team name or look up existing registration
   let resolvedTeamName = teamName;

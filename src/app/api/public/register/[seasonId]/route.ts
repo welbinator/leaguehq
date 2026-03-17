@@ -16,6 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { seasonId: st
   });
 
   if (!season) return NextResponse.json({ error: 'Season not found' }, { status: 404 });
+  if (!season.registrationOpen) return NextResponse.json({ error: 'Registration is not currently open for this season.' }, { status: 403 });
 
   return NextResponse.json({ data: season });
 }
