@@ -179,6 +179,7 @@ model Season {
   teams           Team[]
   games           Game[]
   registrations   Registration[]
+  teamRegistrations TeamRegistration[]
 
   @@index([leagueId])
   @@index([leagueId, status])
@@ -196,6 +197,8 @@ model SeasonDivision {
   // Relations
   season   Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   division Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+
+  teamRegistrations TeamRegistration[]
 
   @@unique([seasonId, divisionId])
   @@index([seasonId])
@@ -373,4 +376,26 @@ model Referee {
   @@unique([userId, leagueId])
   @@index([leagueId])
   @@index([available])
+}
+
+// Public team registration submission (no auth required)
+model TeamRegistration {
+  id               String   @id @default(cuid())
+  seasonId         String
+  seasonDivisionId String?
+  teamName         String
+  captainName      String
+  captainEmail     String
+  captainPhone     String?
+  notes            String?
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  season         Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonDivision SeasonDivision? @relation(fields: [seasonDivisionId], references: [id])
+
+  @@index([seasonId])
+  @@index([status])
 }
