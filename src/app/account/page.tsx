@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -46,7 +48,8 @@ const SPORT_EMOJI: Record<string, string> = {
 };
 
 export default function AccountPage() {
-  const { data: session } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
