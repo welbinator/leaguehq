@@ -73,7 +73,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen bg-navy">
       <Sidebar />
 
-      <main className="flex-1 md:ml-64 pt-14 md:pt-0 p-4 md:p-8">
+      <main className="flex-1 ml-14 md:ml-64 p-4 md:p-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">
           <div>
