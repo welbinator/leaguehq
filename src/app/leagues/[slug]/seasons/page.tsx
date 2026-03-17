@@ -91,6 +91,8 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2500); }
 
   async function loadData() {
+    // Sync season statuses based on current date before loading
+    fetch('/api/cron/season-status').catch(() => {});
     try {
       const leagueRes = await fetch(`/api/leagues/${slug}`);
       const leagueJson = await leagueRes.json();
