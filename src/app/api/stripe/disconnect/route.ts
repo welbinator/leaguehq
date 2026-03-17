@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import Stripe from 'stripe';
 
 // POST /api/stripe/disconnect { leagueId }
 export async function POST(req: NextRequest) {
@@ -11,11 +12,22 @@ export async function POST(req: NextRequest) {
   const { leagueId } = await req.json();
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, ownerId: true },
+    select: { id: true, ownerId: true, stripeConnectAccountId: true },
   });
 
   if (!league || league.ownerId !== (session.user as any).id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  // Delete the Stripe account so it doesn't become an orphan
+  if (league.stripeConnectAccountId && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+      await stripe.accounts.del(league.stripeConnectAccountId);
+    } catch (e: any) {
+      // Log but don't fail — still clear our DB record
+      console.error('Stripe account delete error:', e?.message ?? e);
+    }
   }
 
   await prisma.league.update({
