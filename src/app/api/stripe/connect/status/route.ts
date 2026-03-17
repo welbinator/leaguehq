@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
 // GET /api/stripe/connect/status?leagueId=...
-// Check if the connected account has completed onboarding
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,7 +33,15 @@ export async function GET(req: NextRequest) {
       payoutsEnabled: account.payouts_enabled,
       accountId: league.stripeConnectAccountId,
     });
-  } catch {
+  } catch (err: any) {
+    console.error('Stripe status error:', err?.message);
+    // If the account was deauthorized on Stripe's side, clear it
+    if (err?.code === 'account_invalid') {
+      await prisma.league.update({
+        where: { id: leagueId! },
+        data: { stripeConnectAccountId: null },
+      });
+    }
     return NextResponse.json({ connected: false, complete: false });
   }
 }

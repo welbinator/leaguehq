@@ -2,57 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import Stripe from 'stripe';
 
 // POST /api/stripe/connect { leagueId }
+// Returns a Stripe OAuth URL so the director can connect their existing Stripe account
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { leagueId } = await req.json();
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://leaguehq.club';
+  const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
+
+  if (!clientId) {
+    console.error('STRIPE_CONNECT_CLIENT_ID is not set');
+    return NextResponse.json({ error: 'Stripe Connect is not configured on this server' }, { status: 500 });
+  }
 
   if (!process.env.STRIPE_SECRET_KEY) {
-    console.error('STRIPE_SECRET_KEY is not set');
     return NextResponse.json({ error: 'Stripe is not configured on this server' }, { status: 500 });
   }
 
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, ownerId: true, slug: true, stripeConnectAccountId: true },
+    select: { id: true, ownerId: true },
   });
 
   if (!league || league.ownerId !== (session.user as any).id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
-  try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+  // Build Stripe OAuth URL
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    scope: 'read_write',
+    redirect_uri: `${appUrl}/api/stripe/connect/callback`,
+    state: leagueId, // We'll use this in the callback to know which league to update
+  });
 
-    let accountId = league.stripeConnectAccountId;
-
-    if (!accountId) {
-      const account = await stripe.accounts.create({ type: 'express' });
-      accountId = account.id;
-      await prisma.league.update({
-        where: { id: leagueId },
-        data: { stripeConnectAccountId: accountId },
-      });
-    }
-
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${appUrl}/settings?connect_refresh=1`,
-      return_url: `${appUrl}/settings?league=${leagueId}&connect_success=1`,
-      type: 'account_onboarding',
-    });
-
-    return NextResponse.json({ url: accountLink.url });
-  } catch (err: any) {
-    console.error('Stripe connect error:', err?.message ?? err);
-    return NextResponse.json(
-      { error: err?.message ?? 'Failed to connect Stripe' },
-      { status: 500 }
-    );
-  }
+  const oauthUrl = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
+  return NextResponse.json({ url: oauthUrl });
 }

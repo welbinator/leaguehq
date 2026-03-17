@@ -26,12 +26,16 @@ export async function POST(req: NextRequest) {
         client_id: process.env.STRIPE_CONNECT_CLIENT_ID!,
         stripe_user_id: league.stripeConnectAccountId,
       });
-    } catch (e) {
+    } catch (e: any) {
       // Log but don't fail — still clear our DB record
-      console.error('Stripe deauth error:', e);
+      console.error('Stripe deauth error:', e?.message ?? e);
     }
   }
 
-  await prisma.league.update({ where: { id: leagueId }, data: { stripeConnectAccountId: null } });
+  await prisma.league.update({
+    where: { id: leagueId },
+    data: { stripeConnectAccountId: null },
+  });
+
   return NextResponse.json({ success: true });
 }

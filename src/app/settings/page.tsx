@@ -77,13 +77,13 @@ function SettingsContent() {
     const leagueId = searchParams.get('league');
     if (searchParams.get('connect_success') === '1' && leagueId) {
       showToast('Stripe connected successfully!');
-      // Refresh status for this league
       fetch(`/api/stripe/connect/status?leagueId=${leagueId}`)
         .then(r => r.json())
         .then(s => setStripeStatuses(prev => ({ ...prev, [leagueId]: s })));
     }
     if (searchParams.get('connect_refresh') === '1') {
-      showToast('Stripe onboarding incomplete — please try again.', 'error');
+      const errMsg = searchParams.get('error');
+      showToast(errMsg ? `Stripe error: ${errMsg}` : 'Connection cancelled or incomplete — please try again.', 'error');
     }
   }, [searchParams]);
 
