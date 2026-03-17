@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
     include: {
       divisions: { orderBy: { order: 'asc' } },
-      seasons: { orderBy: { createdAt: 'desc' }, take: 1 },
+      seasons: { orderBy: { createdAt: 'desc' }, take: 1, include: { seasonDivisions: { include: { division: true } } } },
       _count: {
         select: {
           teams: true,

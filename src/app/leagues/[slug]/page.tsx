@@ -90,11 +90,25 @@ export default function LeaguePage({ params }: LeaguePageProps) {
                       {new Date(currentSeason.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-3">
+                  <div className="flex justify-between items-center py-3 border-b border-white/[0.06]">
                     <span className="text-gray-400">Registration Fee</span>
                     <span className="text-accent font-bold">
-                      ${Number(currentSeason.price).toFixed(0)}/player
+                      {!currentSeason.paymentRequired
+                        ? "Free"
+                        : currentSeason.seasonDivisions?.[0]
+                          ? `$${parseFloat(currentSeason.seasonDivisions[0].price) || 0}/${currentSeason.seasonDivisions[0].pricingType === "PER_PLAYER" ? "player" : "team"}`
+                          : "Paid"
+                      }
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-gray-400">Registration Link</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/register/${slug}/${currentSeason.id}`)}
+                      className="text-accent text-sm font-medium hover:underline"
+                    >
+                      Copy Link →
+                    </button>
                   </div>
                 </div>
               ) : (
