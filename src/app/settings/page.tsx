@@ -44,7 +44,7 @@ function SettingsContent() {
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast(msg);
     setToastType(type);
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), type === 'error' ? 15000 : 3500);
   }
 
   async function loadLeagues() {
@@ -134,10 +134,17 @@ function SettingsContent() {
       <Sidebar />
 
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 font-semibold px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in ${
-          toastType === 'success' ? 'bg-accent text-navy' : 'bg-red-500 text-white'
-        }`}>
-          {toast}
+        <div
+          className={`fixed top-4 right-4 z-50 font-semibold px-4 py-3 rounded-lg shadow-lg text-sm animate-fade-in max-w-sm cursor-pointer select-text ${
+            toastType === 'success' ? 'bg-accent text-navy' : 'bg-red-500 text-white'
+          }`}
+          onClick={() => setToast(null)}
+        >
+          <div className="flex items-start gap-2">
+            <span className="flex-1 break-all">{toast}</span>
+            <span className="opacity-60 text-xs flex-shrink-0 mt-0.5">✕</span>
+          </div>
+          {toastType === 'error' && <div className="text-xs opacity-60 mt-1">Click to dismiss</div>}
         </div>
       )}
 
