@@ -23,6 +23,9 @@ export default function LeaguePage({ params }: LeaguePageProps) {
   const [loading, setLoading] = useState(true);
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2500); }
 
   useEffect(() => {
     fetch(`/api/leagues/${slug}`)
@@ -65,6 +68,12 @@ export default function LeaguePage({ params }: LeaguePageProps) {
     <div className="min-h-screen bg-navy">
       <LeagueNav slug={slug} />
 
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-accent text-navy font-semibold px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -104,7 +113,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
                   <div className="flex justify-between items-center py-3">
                     <span className="text-gray-400">Registration Link</span>
                     <button
-                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/register/${slug}/${currentSeason.id}`)}
+                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/register/${slug}/${currentSeason.id}`); showToast('Link copied!'); }}
                       className="text-accent text-sm font-medium hover:underline"
                     >
                       Copy Link →
