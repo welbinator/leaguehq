@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -10,14 +10,14 @@ import { PRICING_TIERS } from '@/types';
 export const dynamic = 'force-dynamic';
 
 export default function PricingPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSelect(tierId: string) {
-    if (!session?.user) {
+  const handleSelect = useCallback(async (tierId: string) => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated' || !session?.user) {
       router.push(`/register?next=/pricing&plan=${tierId}`);
       return;
     }
@@ -40,7 +40,19 @@ export default function PricingPage() {
       setError('Something went wrong. Please try again.');
       setLoading(null);
     }
-  }
+  }, [status, session, router]);
+
+  // Auto-trigger if returning from register with ?plan= param
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan');
+    if (plan) {
+      // Remove param from URL first to prevent re-triggering
+      window.history.replaceState({}, '', '/pricing');
+      handleSelect(plan);
+    }
+  }, [status, handleSelect]);
 
   return (
     <div className="min-h-screen bg-navy">
@@ -50,12 +62,22 @@ export default function PricingPage() {
           <div className="text-center mb-16">
             <h1 className="text-5xl font-black text-white mb-4">Simple, transparent pricing</h1>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Everything you need to run a professional league. Pick the plan that fits your size.
+              No hidden fees, no per-player charges. Pay one flat monthly rate and run your entire league.
             </p>
           </div>
 
           {error && (
             <div className="max-w-lg mx-auto mb-8 bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-4 text-red-400 text-sm text-center">{error}</div>
+          )}
+
+          {/* Show spinner while auto-triggering */}
+          {loading && (
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-3 text-gray-400 text-sm">
+                <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                Preparing checkout…
+              </div>
+            </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -100,7 +122,7 @@ export default function PricingPage() {
 
                 <button
                   onClick={() => handleSelect(tier.id)}
-                  disabled={loading === tier.id}
+                  disabled={!!loading}
                   className={`w-full font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
                     tier.highlighted
                       ? 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/25'

@@ -106,7 +106,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="relative text-sm text-gray-500">
-          Free 14-day trial · No credit card needed · Cancel anytime
+          Start managing your league today
         </div>
       </div>
 
