@@ -208,6 +208,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
           onClose={() => setSeasonModalOpen(false)}
           leagueId={league.id}
           slug={slug}
+          stripeConnected={!!league?.stripeConnectAccountId}
           onCreated={() => {
             setSeasonModalOpen(false);
             // Reload league data
