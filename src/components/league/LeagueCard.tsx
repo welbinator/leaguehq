@@ -5,6 +5,8 @@ import type { League, SubscriptionStatus } from '@/types';
 interface LeagueCardProps {
   league: League & {
     _count?: { teams?: number; registrations?: number };
+    teamRegCount?: number;
+    playerRegCount?: number;
   };
 }
 
@@ -30,8 +32,8 @@ const sportIcons: Record<string, string> = {
 
 export function LeagueCard({ league }: LeagueCardProps) {
   const icon = sportIcons[league.sport] ?? sportIcons.default;
-  const teams = league._count?.teams ?? 0;
-  const players = league._count?.registrations ?? 0;
+  const teams = league.teamRegCount ?? league._count?.teams ?? 0;
+  const players = league.playerRegCount ?? league._count?.registrations ?? 0;
 
   return (
     <Link href={`/leagues/${league.slug}`}>
