@@ -89,13 +89,22 @@ model User {
   email     String   @unique
   password  String
   name      String
+  firstName String?
+  lastName  String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
   role      UserRole @default(PLAYER)
   avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  ownedLeagues      League[]       @relation("LeagueOwner")
+  ownedLeagues         League[]            @relation("LeagueOwner")
+  teamRegistrations    TeamRegistration[]  @relation("TeamRegUser")
+  playerRegistrations  PlayerRegistration[] @relation("PlayerRegUser")
   coachedTeams      Team[]         @relation("TeamCoach")
   captainedTeams    Team[]         @relation("TeamCaptain")
   teamMemberships   TeamMember[]
@@ -391,6 +400,7 @@ model TeamRegistration {
   captainEmail     String
   captainPhone     String?
   notes            String?
+  userId                String?
   status                String   @default("PENDING") // PENDING, APPROVED, REJECTED
   paymentStatus         String?  // unpaid, paid, refunded
   paymentAmount         Decimal? @db.Decimal(10, 2)
@@ -403,10 +413,11 @@ model TeamRegistration {
   // Relations
   season         Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   seasonDivision SeasonDivision? @relation(fields: [seasonDivisionId], references: [id])
-
+  user           User?           @relation("TeamRegUser", fields: [userId], references: [id])
   playerRegistrations PlayerRegistration[]
 
   @@index([seasonId])
+  @@index([userId])
   @@index([status])
 }
 
@@ -415,6 +426,7 @@ model PlayerRegistration {
   seasonId         String
   seasonDivisionId String?
   teamRegistrationId String? // the team they're joining (null if free agent)
+  userId           String?
   playerName       String
   playerEmail      String
   playerPhone      String?
@@ -430,7 +442,9 @@ model PlayerRegistration {
   season         Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   seasonDivision SeasonDivision?  @relation(fields: [seasonDivisionId], references: [id])
   teamRegistration TeamRegistration? @relation(fields: [teamRegistrationId], references: [id])
+  user             User?             @relation("PlayerRegUser", fields: [userId], references: [id])
 
   @@index([seasonId])
   @@index([teamRegistrationId])
+  @@index([userId])
 }
