@@ -132,7 +132,13 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
           window.location.href = checkoutJson.url;
           return;
         }
+        // Checkout failed — show an error instead of silently going to "done"
+        const errMsg = checkoutJson.error ?? 'Could not create payment session. Please contact the league director.';
+        setStep('team');
+        setTeamError(errMsg);
+        return;
       }
+
       setStep('done');
     } catch {
       setTeamError('Something went wrong. Please try again.');
@@ -208,7 +214,7 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
     );
   }
 
-  const inputCls = "w-full bg-white/5 border border-white/10 rounded-lg text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 placeholder-gray-500";
+  const inputCls = "w-full bg-[#0a0f1e] border border-white/10 rounded-lg text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 placeholder-gray-500 appearance-none";
   const labelCls = "block text-xs font-medium text-gray-400 mb-1.5";
 
   return (
@@ -353,8 +359,8 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
                       <input className={inputCls} value={teamName} onChange={e => setTeamName(e.target.value)} required placeholder="Team name" />
                     ) : (
                       <select className={inputCls} value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)} required>
-                        <option value="">Select a team…</option>
-                        {existingTeams.map(t => <option key={t.id} value={t.id}>{t.teamName}</option>)}
+                        <option value="" className="bg-[#0a0f1e]">Select a team…</option>
+                        {existingTeams.map(t => <option key={t.id} value={t.id} className="bg-[#0a0f1e]">{t.teamName}</option>)}
                       </select>
                     )}
                   </div>
@@ -369,8 +375,8 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
                     <p className="text-sm text-gray-500 bg-white/5 rounded-lg px-4 py-3">No teams have registered yet. Check back once your captain has registered.</p>
                   ) : (
                     <select className={inputCls} value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)} required>
-                      <option value="">Select a team…</option>
-                      {existingTeams.map(t => <option key={t.id} value={t.id}>{t.teamName} (Captain: {t.captainName})</option>)}
+                      <option value="" className="bg-[#0a0f1e]">Select a team…</option>
+                      {existingTeams.map(t => <option key={t.id} value={t.id} className="bg-[#0a0f1e]">{t.teamName} (Captain: {t.captainName})</option>)}
                     </select>
                   )}
                 </div>
@@ -381,9 +387,9 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
                 <div className="mt-4">
                   <label className={labelCls}>Division</label>
                   <select className={inputCls} value={selectedDivisionId} onChange={e => setSelectedDivisionId(e.target.value)} required>
-                    <option value="">Select a division…</option>
+                    <option value="" className="bg-[#0a0f1e]">Select a division…</option>
                     {season!.seasonDivisions.map(sd => (
-                      <option key={sd.id} value={sd.id}>{sd.division.name} — ${parseFloat(sd.price) || 0}/{sd.pricingType === 'PER_PLAYER' ? 'player' : 'team'}</option>
+                      <option key={sd.id} value={sd.id} className="bg-[#0a0f1e]">{sd.division.name} — ${parseFloat(sd.price) || 0}/{sd.pricingType === 'PER_PLAYER' ? 'player' : 'team'}</option>
                     ))}
                   </select>
                 </div>

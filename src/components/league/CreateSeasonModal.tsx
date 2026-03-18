@@ -29,6 +29,7 @@ export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [registrationOpen, setRegistrationOpen] = useState(false);
 
   // Step 2
   const [isPaid, setIsPaid] = useState<boolean | null>(null);
@@ -58,7 +59,7 @@ export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }
 
   function reset() {
     setStep(1);
-    setName(''); setStartDate(''); setEndDate('');
+    setName(''); setStartDate(''); setEndDate(''); setRegistrationOpen(false);
     setIsPaid(null); setPricingType('PER_PLAYER');
     setPaymentRequired(true); setPaymentDueDate('');
     setDivisionCount(null); setSinglePrice('');
@@ -135,7 +136,7 @@ export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }
           name,
           startDate,
           endDate,
-          registrationOpen: false,
+          registrationOpen,
           paymentRequired: isPaid ? paymentRequired : false,
           paymentDueDate: isPaid && !paymentRequired && paymentDueDate ? paymentDueDate : null,
           // Pass division data for inline creation
@@ -213,6 +214,18 @@ export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }
           <div>
             <label className={labelClass}>End Date</label>
             <input type="date" className={inputClass} value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <div
+            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${registrationOpen ? 'border-accent bg-accent/5' : 'border-white/10'}`}
+            onClick={() => setRegistrationOpen(r => !r)}
+          >
+            <div>
+              <div className="text-sm font-medium text-white">Open registration now</div>
+              <div className="text-xs text-gray-400 mt-0.5">Players can register as soon as you create this season</div>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${registrationOpen ? 'bg-accent' : 'bg-white/10'}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${registrationOpen ? 'left-5' : 'left-1'}`} />
+            </div>
           </div>
         </div>
       )}
