@@ -1,29 +1,28 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { PRICING_TIERS } from '@/types';
 
 export function PricingContent() {
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = loading
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Check auth status client-side only — avoids useSession SSR crash entirely
   useEffect(() => {
     fetch('/api/auth/session')
       .then(r => r.json())
-      .then(data => {
-        setAuthStatus(data?.user ? 'authenticated' : 'unauthenticated');
-      })
-      .catch(() => setAuthStatus('unauthenticated'));
+      .then(data => setIsLoggedIn(!!data?.user))
+      .catch(() => setIsLoggedIn(false));
   }, []);
 
-  const handleSelect = useCallback(async (tierId: string) => {
-    if (authStatus === 'loading') return;
-    if (authStatus === 'unauthenticated') {
-      window.location.href = `/register?next=/pricing&plan=${tierId}`;
+  async function handleSelect(tierId: string) {
+    if (isLoggedIn === null) return; // still loading
+
+    if (!isLoggedIn) {
+      window.location.href = '/register';
       return;
     }
+
     setLoading(tierId);
     setError(null);
     try {
@@ -36,53 +35,20 @@ export function PricingContent() {
       if (json.url) {
         window.location.href = json.url;
       } else {
-        setError(json.error ?? 'Something went wrong');
+        setError(json.error ?? 'Something went wrong. Please try again.');
         setLoading(null);
       }
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(null);
     }
-  }, [authStatus]);
-
-  // Auto-trigger if returning from register with ?plan= param
-  useEffect(() => {
-    if (authStatus !== 'authenticated') return;
-    const params = new URLSearchParams(window.location.search);
-    const plan = params.get('plan');
-    if (plan) {
-      window.history.replaceState({}, '', '/pricing');
-      // Auto-trigger silently — on error redirect to login rather than showing error
-      setLoading(plan);
-      fetch('/api/stripe/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: plan }),
-      }).then(r => r.json()).then(json => {
-        if (json.url) {
-          window.location.href = json.url;
-        } else if (json.error === 'User not found. Please sign in again.') {
-          window.location.href = `/login?next=/pricing&plan=${plan}`;
-        } else {
-          setError(json.error ?? 'Something went wrong');
-          setLoading(null);
-        }
-      }).catch(() => { setError('Something went wrong.'); setLoading(null); });
-    }
-  }, [authStatus]);
+  }
 
   return (
     <>
       {error && (
-        <div className="max-w-lg mx-auto mb-8 bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-4 text-red-400 text-sm text-center">{error}</div>
-      )}
-
-      {loading && (
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 text-gray-400 text-sm">
-            <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-            Preparing checkout…
-          </div>
+        <div className="max-w-lg mx-auto mb-8 bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-4 text-red-400 text-sm text-center">
+          {error}
         </div>
       )}
 
@@ -128,22 +94,26 @@ export function PricingContent() {
 
             <button
               onClick={() => handleSelect(tier.id)}
-              disabled={!!loading || authStatus === 'loading'}
+              disabled={!!loading || isLoggedIn === null}
               className={`w-full font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
                 tier.highlighted
                   ? 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/25'
                   : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
               }`}
             >
-              {loading === tier.id ? 'Redirecting…' : 'Get Started'}
+              {loading === tier.id
+                ? 'Redirecting…'
+                : isLoggedIn
+                  ? 'Purchase'
+                  : 'Create Account'}
             </button>
           </div>
         ))}
       </div>
 
       <p className="text-center text-sm text-gray-500 mt-10">
-        Prices in USD. Cancel anytime. Questions?{' '}
-        <a href="mailto:support@leaguehq.club" className="text-accent hover:underline">Contact us</a>
+        Prices in USD. Cancel anytime. Already have an account?{' '}
+        <a href="/login" className="text-accent hover:underline">Sign in</a>
       </p>
     </>
   );

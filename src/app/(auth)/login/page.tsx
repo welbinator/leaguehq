@@ -30,11 +30,7 @@ export default function LoginPage() {
         setError(result.error);
       } else {
         const params = new URLSearchParams(window.location.search);
-        let nextUrl = params.get('next') ?? '/dashboard';
-        const plan = params.get('plan');
-        if (plan && nextUrl.includes('/pricing')) {
-          nextUrl += (nextUrl.includes('?') ? '&' : '?') + `plan=${plan}`;
-        }
+        const nextUrl = params.get('next') ?? '/dashboard';
         router.push(nextUrl);
         router.refresh();
       }
