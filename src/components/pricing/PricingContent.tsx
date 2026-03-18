@@ -1,20 +1,27 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { PRICING_TIERS } from '@/types';
 
 export function PricingContent() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Check auth status client-side only — avoids useSession SSR crash entirely
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(data => {
+        setAuthStatus(data?.user ? 'authenticated' : 'unauthenticated');
+      })
+      .catch(() => setAuthStatus('unauthenticated'));
+  }, []);
+
   const handleSelect = useCallback(async (tierId: string) => {
-    if (status === 'loading') return;
-    if (status === 'unauthenticated' || !session?.user) {
-      router.push(`/register?next=/pricing&plan=${tierId}`);
+    if (authStatus === 'loading') return;
+    if (authStatus === 'unauthenticated') {
+      window.location.href = `/register?next=/pricing&plan=${tierId}`;
       return;
     }
     setLoading(tierId);
@@ -36,18 +43,18 @@ export function PricingContent() {
       setError('Something went wrong. Please try again.');
       setLoading(null);
     }
-  }, [status, session, router]);
+  }, [authStatus]);
 
   // Auto-trigger if returning from register with ?plan= param
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (authStatus !== 'authenticated') return;
     const params = new URLSearchParams(window.location.search);
     const plan = params.get('plan');
     if (plan) {
       window.history.replaceState({}, '', '/pricing');
       handleSelect(plan);
     }
-  }, [status, handleSelect]);
+  }, [authStatus, handleSelect]);
 
   return (
     <>
@@ -106,7 +113,7 @@ export function PricingContent() {
 
             <button
               onClick={() => handleSelect(tier.id)}
-              disabled={!!loading}
+              disabled={!!loading || authStatus === 'loading'}
               className={`w-full font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
                 tier.highlighted
                   ? 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/25'
