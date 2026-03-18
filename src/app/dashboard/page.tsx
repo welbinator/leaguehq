@@ -66,8 +66,8 @@ export default function DashboardPage() {
     }
   }
 
-  const totalTeams = leagues.reduce((sum, l) => sum + (l._count?.teams ?? 0), 0);
-  const totalPlayers = leagues.reduce((sum, l) => sum + (l._count?.members ?? 0), 0);
+  const totalTeams = leagues.reduce((sum: number, l: any) => sum + (l.teamRegCount ?? 0), 0);
+  const totalPlayers = leagues.reduce((sum: number, l: any) => sum + (l.playerRegCount ?? 0), 0);
 
   return (
     <div className="flex min-h-screen bg-navy">

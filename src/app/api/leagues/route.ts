@@ -27,14 +27,25 @@ export async function GET(req: NextRequest) {
   const leagues = await prisma.league.findMany({
     where: { ownerId: (session.user as any).id },
     include: {
+      seasons: { select: { id: true } },
       _count: {
-        select: { teams: true, registrations: true },
+        select: { teams: true },
       },
     },
     orderBy: { createdAt: 'desc' },
   });
 
-  return NextResponse.json({ data: leagues });
+  // Attach TeamRegistration counts per league
+  const enriched = await Promise.all(leagues.map(async (league: any) => {
+    const seasonIds = league.seasons.map((s: any) => s.id);
+    const [teamRegCount, playerRegCount] = await Promise.all([
+      prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
+      prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
+    ]);
+    return { ...league, teamRegCount, playerRegCount };
+  }));
+
+  return NextResponse.json({ data: enriched });
 }
 
 // POST /api/leagues — create a new league
