@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/Input';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const nextUrl = searchParams?.get('next') ?? '/dashboard';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +51,8 @@ export default function RegisterPage() {
       if (signInResult?.error) {
         setError('Account created, but sign in failed. Please log in manually.');
       } else {
+        const params = new URLSearchParams(window.location.search);
+        const nextUrl = params.get('next') ?? '/dashboard';
         router.push(nextUrl);
         router.refresh();
       }
