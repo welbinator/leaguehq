@@ -29,7 +29,13 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error);
       } else {
-        router.push('/dashboard');
+        const params = new URLSearchParams(window.location.search);
+        let nextUrl = params.get('next') ?? '/dashboard';
+        const plan = params.get('plan');
+        if (plan && nextUrl.includes('/pricing')) {
+          nextUrl += (nextUrl.includes('?') ? '&' : '?') + `plan=${plan}`;
+        }
+        router.push(nextUrl);
         router.refresh();
       }
     } catch {

@@ -52,7 +52,12 @@ export default function RegisterPage() {
         setError('Account created, but sign in failed. Please log in manually.');
       } else {
         const params = new URLSearchParams(window.location.search);
-        const nextUrl = params.get('next') ?? '/dashboard';
+        let nextUrl = params.get('next') ?? '/dashboard';
+        // Re-append any extra params (e.g. plan) that weren't part of 'next'
+        const plan = params.get('plan');
+        if (plan && nextUrl.includes('/pricing')) {
+          nextUrl += (nextUrl.includes('?') ? '&' : '?') + `plan=${plan}`;
+        }
         router.push(nextUrl);
         router.refresh();
       }
