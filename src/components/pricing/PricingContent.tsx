@@ -52,9 +52,24 @@ export function PricingContent() {
     const plan = params.get('plan');
     if (plan) {
       window.history.replaceState({}, '', '/pricing');
-      handleSelect(plan);
+      // Auto-trigger silently — on error redirect to login rather than showing error
+      setLoading(plan);
+      fetch('/api/stripe/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: plan }),
+      }).then(r => r.json()).then(json => {
+        if (json.url) {
+          window.location.href = json.url;
+        } else if (json.error === 'User not found. Please sign in again.') {
+          window.location.href = `/login?next=/pricing&plan=${plan}`;
+        } else {
+          setError(json.error ?? 'Something went wrong');
+          setLoading(null);
+        }
+      }).catch(() => { setError('Something went wrong.'); setLoading(null); });
     }
-  }, [authStatus, handleSelect]);
+  }, [authStatus]);
 
   return (
     <>

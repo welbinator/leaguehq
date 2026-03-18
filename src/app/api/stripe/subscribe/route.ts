@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 
   // Get or create Stripe customer
   let user = await prisma.user.findUnique({ where: { id: userId }, select: { stripeCustomerId: true } });
+  if (!user) return NextResponse.json({ error: 'User not found. Please sign in again.' }, { status: 404 });
   let customerId = user?.stripeCustomerId;
 
   if (!customerId) {
