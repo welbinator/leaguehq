@@ -3,15 +3,17 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
 // POST /api/stripe/checkout/registration
-// Public — no auth required. Creates a Checkout session after registration form submission.
-// Payment goes to the league director's connected account minus a 2.5% platform fee.
+// Creates a Stripe Checkout session using a destination charge:
+// - Charge is created on the PLATFORM account
+// - Full amount is transferred to the league director's connected account
+// - Platform takes a 2.5% application fee from that transfer
+// This is the correct pattern for Standard Connect accounts.
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
   }
 
   const { registrationId, registrationType } = await req.json();
-  // registrationType: 'team' (default) or 'player'
   const isPlayer = registrationType === 'player';
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://leaguehq.club';
 
@@ -51,7 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'League does not have Stripe connected' }, { status: 400 });
   }
 
-  // Get price from selected division or first available division
   const sd = registration.seasonDivision ?? registration.season.seasonDivisions?.[0];
   const priceAmount = sd ? parseFloat(String(sd.price)) || 0 : 0;
   const pricingType = sd?.pricingType ?? 'PER_PLAYER';
@@ -65,35 +66,36 @@ export async function POST(req: NextRequest) {
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  // Create checkout session on behalf of the connected account.
-  // This makes the charge appear in the connected account (director's Stripe),
-  // and the platform fee is taken from that charge automatically.
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          unit_amount: amountCents,
-          product_data: {
-            name: `${league.name} — ${registration.season.name} Registration`,
-            description: `${pricingType === 'PER_PLAYER' ? 'Per player' : 'Per team'} · Team: ${registration.teamName}`,
-          },
+  // Destination charge: session is created on the PLATFORM account (no stripeAccount header).
+  // transfer_data.destination routes the funds to the director's connected account.
+  // application_fee_amount is deducted from the transfer — platform keeps that portion.
+  // Result: director sees the full charge in their Stripe dashboard; platform gets the fee.
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        unit_amount: amountCents,
+        product_data: {
+          name: `${league.name} — ${registration.season.name} Registration`,
+          description: `${pricingType === 'PER_PLAYER' ? 'Per player' : 'Per team'} · Team: ${registration.teamName ?? 'Player registration'}`,
         },
-        quantity: 1,
-      }],
-      payment_intent_data: {
-        application_fee_amount: platformFeeCents,
       },
-      success_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=success&reg=${registrationId}`,
-      cancel_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=cancelled`,
-      metadata: { registrationId, leagueId: league.id, seasonId: registration.seasonId },
+      quantity: 1,
+    }],
+    payment_intent_data: {
+      // Route funds to the league director's Stripe account
+      transfer_data: {
+        destination: league.stripeConnectAccountId,
+      },
+      // Platform fee deducted before transfer
+      application_fee_amount: platformFeeCents,
     },
-    {
-      // Run this checkout as the connected account — charge appears in their dashboard
-      stripeAccount: league.stripeConnectAccountId,
-    }
-  );
+    success_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=success&reg=${registrationId}`,
+    cancel_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=cancelled`,
+    metadata: { registrationId, leagueId: league.id, seasonId: registration.seasonId },
+  });
+  // Note: NO stripeAccount option here — session runs on the platform account intentionally.
 
   return NextResponse.json({ url: session.url });
 }
