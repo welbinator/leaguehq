@@ -16,6 +16,7 @@ const SPORTS = [
 export default function DashboardPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthRevenue, setMonthRevenue] = useState(0);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newLeagueName, setNewLeagueName] = useState('');
   const [newLeagueSport, setNewLeagueSport] = useState('Soccer');
@@ -102,7 +103,7 @@ export default function DashboardPage() {
             { label: 'Total Leagues', value: loading ? '—' : leagues.length, icon: '🏆' },
             { label: 'Active Teams', value: loading ? '—' : totalTeams, icon: '👥' },
             { label: 'Total Players', value: loading ? '—' : totalPlayers, icon: '🏃' },
-            { label: 'This Month', value: '$0', icon: '💳' },
+            { label: 'This Month', value: loading ? '—' : `$${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`, icon: '💳' },
           ].map((stat) => (
             <div key={stat.label} className="bg-surface border border-white/[0.06] rounded-2xl p-5">
               <div className="text-2xl mb-2">{stat.icon}</div>

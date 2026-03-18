@@ -1,146 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
-import stripe from '@/lib/stripe';
 
+export const dynamic = 'force-dynamic';
 
-const TIER_MAP: Record<string, 'STARTER' | 'GROWTH' | 'PRO'> = {
-  [process.env.STRIPE_PRICE_STARTER ?? '']: 'STARTER',
-  [process.env.STRIPE_PRICE_GROWTH ?? '']: 'GROWTH',
-  [process.env.STRIPE_PRICE_PRO ?? '']: 'PRO',
-};
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' });
 
 export async function POST(req: NextRequest) {
-  if (!stripe) {
-    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
-  }
-
+  const body = await req.text();
   const sig = req.headers.get('stripe-signature');
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!sig || !webhookSecret) {
-    return NextResponse.json({ error: 'Missing stripe signature or webhook secret' }, { status: 400 });
+  if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
   }
 
   let event: Stripe.Event;
   try {
-    const body = await req.text();
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err: any) {
-    console.error('[stripe/webhook] signature verification failed:', err.message);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+    console.error('[webhook] signature verification failed:', err.message);
+    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
   }
 
-  try {
-    switch (event.type) {
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const registrationId = session.metadata?.registrationId;
+    if (!registrationId) return NextResponse.json({ received: true });
 
-      // ── Registration payment completed ────────────────────────────────────
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const { type, registrationId, leagueId } = session.metadata ?? {};
+    const amountTotal = session.amount_total ?? 0;
+    const amountDollars = amountTotal / 100;
 
-        if (type === 'registration' && registrationId) {
-          await prisma.registration.update({
-            where: { id: registrationId },
-            data: {
-              status: 'APPROVED',
-              paidAt: new Date(),
-              stripePaymentIntentId: session.payment_intent as string ?? null,
-            },
-          });
-          console.log(`[stripe/webhook] Registration ${registrationId} marked as paid`);
-        }
+    await prisma.teamRegistration.update({
+      where: { id: registrationId },
+      data: {
+        paymentStatus: 'paid',
+        paymentAmount: amountDollars,
+        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        paidAt: new Date(),
+        status: 'APPROVED', // auto-approve on payment
+      },
+    });
 
-        if (type === 'subscription' && leagueId) {
-          // Subscription activated via checkout — handled more fully by
-          // customer.subscription.created/updated below, but log it here
-          console.log(`[stripe/webhook] Subscription checkout completed for league ${leagueId}`);
-        }
-        break;
-      }
-
-      // ── Subscription created or updated ───────────────────────────────────
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        const league = await prisma.league.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-        if (!league) {
-          console.warn(`[stripe/webhook] No league found for customer ${customerId}`);
-          break;
-        }
-
-        const priceId = subscription.items.data[0]?.price.id;
-        const tier = TIER_MAP[priceId] ?? null;
-
-        const statusMap: Record<string, string> = {
-          active: 'ACTIVE',
-          trialing: 'TRIALING',
-          past_due: 'PAST_DUE',
-          canceled: 'CANCELLED',
-          unpaid: 'UNPAID',
-        };
-        const subStatus = statusMap[subscription.status] ?? 'ACTIVE';
-
-        await prisma.league.update({
-          where: { id: league.id },
-          data: {
-            ...(tier ? { subscriptionTier: tier } : {}),
-            subscriptionStatus: subStatus as any,
-          },
-        });
-        console.log(`[stripe/webhook] League ${league.id} subscription updated: tier=${tier} status=${subStatus}`);
-        break;
-      }
-
-      // ── Subscription cancelled ────────────────────────────────────────────
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        const league = await prisma.league.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-        if (!league) break;
-
-        await prisma.league.update({
-          where: { id: league.id },
-          data: {
-            subscriptionTier: 'FREE',
-            subscriptionStatus: 'CANCELLED',
-          },
-        });
-        console.log(`[stripe/webhook] League ${league.id} downgraded to FREE (subscription cancelled)`);
-        break;
-      }
-
-      // ── Payment failed (subscription past due) ────────────────────────────
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = invoice.customer as string;
-
-        const league = await prisma.league.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-        if (!league) break;
-
-        await prisma.league.update({
-          where: { id: league.id },
-          data: { subscriptionStatus: 'PAST_DUE' },
-        });
-        console.log(`[stripe/webhook] League ${league.id} payment failed — marked PAST_DUE`);
-        break;
-      }
-
-      default:
-        console.log(`[stripe/webhook] Unhandled event type: ${event.type}`);
-    }
-  } catch (err: any) {
-    console.error('[stripe/webhook] handler error:', err);
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
+    console.log(`[webhook] Registration ${registrationId} paid $${amountDollars}`);
   }
 
   return NextResponse.json({ received: true });
