@@ -90,7 +90,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-1 bg-surface rounded-xl p-1 mb-6 w-fit">
+        <div className="flex gap-1 bg-surface rounded-xl p-1 mb-6 overflow-x-auto w-full sm:w-fit">
           {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(f => (
             <button
               key={f}
@@ -140,14 +140,14 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2 text-sm">
                       <div>
                         <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Captain</span>
                         <span className="text-gray-200">{reg.captainName}</span>
                       </div>
                       <div>
                         <span className="text-gray-500 text-xs uppercase tracking-wide block mb-0.5">Email</span>
-                        <a href={`mailto:${reg.captainEmail}`} className="text-accent hover:underline text-sm">{reg.captainEmail}</a>
+                        <a href={`mailto:${reg.captainEmail}`} className="text-accent hover:underline text-sm truncate block max-w-[160px]">{reg.captainEmail}</a>
                       </div>
                       {reg.captainPhone && (
                         <div>
