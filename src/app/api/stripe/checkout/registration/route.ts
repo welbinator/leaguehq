@@ -47,27 +47,35 @@ export async function POST(req: NextRequest) {
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{
-      price_data: {
-        currency: 'usd',
-        unit_amount: amountCents,
-        product_data: {
-          name: `${league.name} — ${registration.season.name} Registration`,
-          description: `${pricingType === 'PER_PLAYER' ? 'Per player' : 'Per team'} · Team: ${registration.teamName}`,
+  // Create checkout session on behalf of the connected account.
+  // This makes the charge appear in the connected account (director's Stripe),
+  // and the platform fee is taken from that charge automatically.
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: amountCents,
+          product_data: {
+            name: `${league.name} — ${registration.season.name} Registration`,
+            description: `${pricingType === 'PER_PLAYER' ? 'Per player' : 'Per team'} · Team: ${registration.teamName}`,
+          },
         },
+        quantity: 1,
+      }],
+      payment_intent_data: {
+        application_fee_amount: platformFeeCents,
       },
-      quantity: 1,
-    }],
-    payment_intent_data: {
-      application_fee_amount: platformFeeCents,
-      transfer_data: { destination: league.stripeConnectAccountId },
+      success_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=success&reg=${registrationId}`,
+      cancel_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=cancelled`,
+      metadata: { registrationId, leagueId: league.id, seasonId: registration.seasonId },
     },
-    success_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=success&reg=${registrationId}`,
-    cancel_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=cancelled`,
-    metadata: { registrationId, leagueId: league.id, seasonId: registration.seasonId },
-  });
+    {
+      // Run this checkout as the connected account — charge appears in their dashboard
+      stripeAccount: league.stripeConnectAccountId,
+    }
+  );
 
   return NextResponse.json({ url: session.url });
 }
