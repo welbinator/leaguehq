@@ -40,6 +40,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchLeagues();
+
+    // If returning from Stripe subscription checkout, activate the subscription
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscribed') === '1') {
+      const tier = params.get('tier') ?? 'STARTER';
+      fetch('/api/stripe/activate-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      }).then(r => r.json()).then(json => {
+        if (json.ok) {
+          setHasActivePlan(true);
+          // Clean up URL
+          window.history.replaceState({}, '', '/dashboard');
+        }
+      });
+    }
   }, []);
 
   async function handleCreateLeague(e: React.FormEvent) {
