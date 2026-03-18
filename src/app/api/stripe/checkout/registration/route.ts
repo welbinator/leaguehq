@@ -10,21 +10,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
   }
 
-  const { registrationId } = await req.json();
+  const { registrationId, registrationType } = await req.json();
+  // registrationType: 'team' (default) or 'player'
+  const isPlayer = registrationType === 'player';
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://leaguehq.club';
 
-  const registration = await prisma.teamRegistration.findUnique({
-    where: { id: registrationId },
-    include: {
-      season: {
-        include: {
-          league: { select: { id: true, name: true, slug: true, stripeConnectAccountId: true } },
-          seasonDivisions: true,
+  let registration: any;
+  if (isPlayer) {
+    registration = await prisma.playerRegistration.findUnique({
+      where: { id: registrationId },
+      include: {
+        season: {
+          include: {
+            league: { select: { id: true, name: true, slug: true, stripeConnectAccountId: true } },
+            seasonDivisions: true,
+          },
         },
+        seasonDivision: true,
       },
-      seasonDivision: true,
-    },
-  });
+    });
+  } else {
+    registration = await prisma.teamRegistration.findUnique({
+      where: { id: registrationId },
+      include: {
+        season: {
+          include: {
+            league: { select: { id: true, name: true, slug: true, stripeConnectAccountId: true } },
+            seasonDivisions: true,
+          },
+        },
+        seasonDivision: true,
+      },
+    });
+  }
 
   if (!registration) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
 

@@ -181,6 +181,7 @@ model Season {
   games           Game[]
   registrations   Registration[]
   teamRegistrations TeamRegistration[]
+  playerRegistrations PlayerRegistration[]
 
   @@index([leagueId])
   @@index([leagueId, status])
@@ -200,6 +201,7 @@ model SeasonDivision {
   division Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
 
   teamRegistrations TeamRegistration[]
+  playerRegistrations PlayerRegistration[]
 
   @@unique([seasonId, divisionId])
   @@index([seasonId])
@@ -402,6 +404,33 @@ model TeamRegistration {
   season         Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   seasonDivision SeasonDivision? @relation(fields: [seasonDivisionId], references: [id])
 
+  playerRegistrations PlayerRegistration[]
+
   @@index([seasonId])
   @@index([status])
+}
+
+model PlayerRegistration {
+  id               String   @id @default(cuid())
+  seasonId         String
+  seasonDivisionId String?
+  teamRegistrationId String? // the team they're joining (null if free agent)
+  playerName       String
+  playerEmail      String
+  playerPhone      String?
+  notes            String?
+  paymentStatus         String?
+  paymentAmount         Decimal? @db.Decimal(10, 2)
+  stripePaymentIntentId String?
+  stripeCheckoutSessionId String?
+  paidAt                DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  season         Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonDivision SeasonDivision?  @relation(fields: [seasonDivisionId], references: [id])
+  teamRegistration TeamRegistration? @relation(fields: [teamRegistrationId], references: [id])
+
+  @@index([seasonId])
+  @@index([teamRegistrationId])
 }

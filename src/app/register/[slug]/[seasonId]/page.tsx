@@ -86,7 +86,7 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
         const checkoutRes = await fetch('/api/stripe/checkout/registration', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ registrationId }),
+          body: JSON.stringify({ registrationId, registrationType: isCaptain ? 'team' : 'player' }),
         });
         const checkoutJson = await checkoutRes.json();
         if (checkoutJson.url) {
