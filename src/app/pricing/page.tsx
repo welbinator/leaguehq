@@ -10,7 +10,8 @@ import { PRICING_TIERS } from '@/types';
 export const dynamic = 'force-dynamic';
 
 export default function PricingPage() {
-  const { data: session } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
