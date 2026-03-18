@@ -13,6 +13,8 @@ const SPORTS = [
   'Tennis', 'Hockey', 'Softball', 'Lacrosse', 'Rugby', 'Other',
 ];
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,25 +40,46 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    fetchLeagues();
+  async function fetchSubscriptionStatus() {
+    try {
+      const res = await fetch('/api/user/subscription');
+      if (res.ok) {
+        const json = await res.json();
+        setHasActivePlan(json.hasActivePlan ?? false);
+      }
+    } catch (err) {
+      console.error('Failed to fetch subscription status', err);
+    }
+  }
 
-    // If returning from Stripe subscription checkout, activate the subscription
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
     if (params.get('subscribed') === '1') {
+      // Returning from Stripe checkout — activate first, then fetch status
       const tier = params.get('tier') ?? 'STARTER';
       fetch('/api/stripe/activate-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier }),
-      }).then(r => r.json()).then(json => {
-        if (json.ok) {
-          setHasActivePlan(true);
-          // Clean up URL
+      })
+        .then(r => r.json())
+        .then(json => {
+          if (json.ok) {
+            setHasActivePlan(true);
+          }
+          // Clean up URL regardless
           window.history.replaceState({}, '', '/dashboard');
-        }
-      });
+        })
+        .catch(() => {
+          window.history.replaceState({}, '', '/dashboard');
+        });
+    } else {
+      // Normal load — check subscription status from DB
+      fetchSubscriptionStatus();
     }
+
+    fetchLeagues();
   }, []);
 
   async function handleCreateLeague(e: React.FormEvent) {
