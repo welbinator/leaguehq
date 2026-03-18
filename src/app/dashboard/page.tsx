@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthRevenue, setMonthRevenue] = useState(0);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newLeagueName, setNewLeagueName] = useState('');
   const [newLeagueSport, setNewLeagueSport] = useState('Soccer');
@@ -54,7 +55,11 @@ export default function DashboardPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error ?? 'Failed to create league');
+        if (json.error === 'SUBSCRIPTION_REQUIRED') {
+          window.location.href = '/pricing';
+          return;
+        }
+        throw new Error(json.message ?? json.error ?? 'Failed to create league');
       }
       setCreateModalOpen(false);
       setNewLeagueName('');
@@ -83,12 +88,18 @@ export default function DashboardPage() {
               Manage your leagues, seasons, and teams from one place.
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)} size="lg">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-            </svg>
-            New League
-          </Button>
+          {hasActivePlan ? (
+            <Button onClick={() => setCreateModalOpen(true)} size="lg">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              New League
+            </Button>
+          ) : (
+            <a href="/pricing" className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors">
+              🔒 Choose a Plan
+            </a>
+          )}
         </div>
 
         {error && (
@@ -131,9 +142,18 @@ export default function DashboardPage() {
             <p className="text-gray-400 mb-6 max-w-md">
               Create your first league to get started. You can manage teams, schedules, and players all in one place.
             </p>
-            <Button onClick={() => setCreateModalOpen(true)} size="lg">
-              Create Your First League
-            </Button>
+            {hasActivePlan ? (
+              <Button onClick={() => setCreateModalOpen(true)} size="lg">
+                Create Your First League
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">A paid plan is required to create a league.</p>
+                <a href="/pricing" className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-bold px-6 py-3 rounded-xl transition-colors">
+                  View Plans →
+                </a>
+              </div>
+            )}
           </div>
         )}
       </main>

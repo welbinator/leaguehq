@@ -91,7 +91,7 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent text-sm font-medium px-4 py-2 rounded-full mb-8">
             <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-            Now in public beta — free to try
+            Purpose-built for sports league directors
           </div>
 
           {/* Headline */}
@@ -108,10 +108,10 @@ export default function LandingPage() {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/register"
+              href="/pricing"
               className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-bold px-8 py-4 rounded-xl text-lg transition-all duration-200 shadow-2xl shadow-accent/25 hover:shadow-accent/40 hover:-translate-y-0.5"
             >
-              Get Started Free
+              View Plans & Pricing
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
@@ -133,7 +133,7 @@ export default function LandingPage() {
               <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
-              No credit card required
+              Plans starting at $29/month
             </div>
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
@@ -222,7 +222,7 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-black text-white mb-4">Simple, transparent pricing</h2>
             <p className="text-lg text-gray-400">
-              Start free. Upgrade when you're ready. No hidden fees, no per-player nickels and dimes.
+              No hidden fees, no per-player charges. Pay one flat monthly rate and run your entire league.
             </p>
           </div>
 
@@ -272,7 +272,7 @@ export default function LandingPage() {
                 </ul>
 
                 <Link
-                  href="/register"
+                  href="/pricing"
                   className={`block text-center font-bold py-3 px-6 rounded-xl transition-all duration-200 ${
                     tier.highlighted
                       ? 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/25'
@@ -286,7 +286,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-8">
-            All plans include a 14-day free trial. No credit card required to start.
+            All plans billed monthly. Cancel anytime.
           </p>
         </div>
       </section>
@@ -302,10 +302,10 @@ export default function LandingPage() {
               Join hundreds of league organizers who've ditched the chaos and moved to LeagueHQ.
             </p>
             <Link
-              href="/register"
+              href="/pricing"
               className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-bold px-8 py-4 rounded-xl text-lg transition-all duration-200 shadow-2xl shadow-accent/25"
             >
-              Start Free Today
+              Get Started Today
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>

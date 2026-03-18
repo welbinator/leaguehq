@@ -98,6 +98,10 @@ model User {
   zip       String?
   role      UserRole @default(PLAYER)
   avatarUrl String?
+  stripeCustomerId     String?
+  subscriptionTier     String   @default("FREE")  // FREE, STARTER, GROWTH, PRO
+  subscriptionStatus   String   @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED
+  stripeSubscriptionId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

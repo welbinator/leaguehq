@@ -69,6 +69,19 @@ export async function POST(req: NextRequest) {
     const { name, sport, description } = parsed.data;
     const userId = (session.user as any).id;
 
+    // Require active paid subscription to create a league
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionTier: true, subscriptionStatus: true },
+    });
+    const hasPaidPlan = user?.subscriptionTier !== 'FREE' && user?.subscriptionStatus === 'ACTIVE';
+    if (!hasPaidPlan) {
+      return NextResponse.json(
+        { error: 'SUBSCRIPTION_REQUIRED', message: 'A paid plan is required to create a league.' },
+        { status: 403 }
+      );
+    }
+
     // Generate unique slug
     let slug = slugify(name);
     const existing = await prisma.league.findUnique({ where: { slug } });

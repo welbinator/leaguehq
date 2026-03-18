@@ -19,6 +19,9 @@ export async function GET() {
       name: true,
       role: true,
       avatarUrl: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      stripeSubscriptionId: true,
       createdAt: true,
       ownedLeagues: {
         select: {

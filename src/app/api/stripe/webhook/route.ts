@@ -22,6 +22,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
   }
 
+  // Subscription activated
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    if (session.mode === 'subscription' && session.metadata?.userId) {
+      const tier = session.metadata.tier ?? 'STARTER';
+      await prisma.user.update({
+        where: { id: session.metadata.userId },
+        data: {
+          subscriptionTier: tier,
+          subscriptionStatus: 'ACTIVE',
+          stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+        },
+      });
+      console.log(`[webhook] User ${session.metadata.userId} subscribed to ${tier}`);
+      return NextResponse.json({ received: true });
+    }
+  }
+
+  // Subscription updated/renewed
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object as Stripe.Subscription;
+    const user = await prisma.user.findFirst({ where: { stripeSubscriptionId: sub.id } });
+    if (user) {
+      const status = sub.status === 'active' ? 'ACTIVE' : sub.status === 'past_due' ? 'PAST_DUE' : 'INACTIVE';
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { subscriptionStatus: status },
+      });
+    }
+    return NextResponse.json({ received: true });
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     const registrationId = session.metadata?.registrationId;
