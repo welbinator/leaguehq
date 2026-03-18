@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
 // POST /api/stripe/checkout/registration
-// Creates a Stripe Checkout session using a destination charge:
-// - Charge is created on the PLATFORM account
-// - Full amount is transferred to the league director's connected account
-// - Platform takes a 2.5% application fee from that transfer
-// This is the correct pattern for Standard Connect accounts.
+// Creates a Stripe Checkout session using on_behalf_of + transfer_data.
+// This means:
+// - The charge appears in the DIRECTOR's Stripe dashboard as their own payment
+// - The customer sees the director's business name on their statement
+// - Funds land directly in the director's account
+// - Platform collects application_fee_amount automatically
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
@@ -66,10 +67,11 @@ export async function POST(req: NextRequest) {
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  // Destination charge: session is created on the PLATFORM account (no stripeAccount header).
-  // transfer_data.destination routes the funds to the director's connected account.
-  // application_fee_amount is deducted from the transfer — platform keeps that portion.
-  // Result: director sees the full charge in their Stripe dashboard; platform gets the fee.
+  // on_behalf_of: charge appears in the director's Stripe dashboard as their own payment.
+  // transfer_data.destination: funds go directly to the director's account.
+  // application_fee_amount: platform collects 2.5% from each transaction.
+  // Session is created on the platform account (no stripeAccount header) so we
+  // can use our own API key and webhook — but the director owns the charge.
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [{
@@ -84,18 +86,16 @@ export async function POST(req: NextRequest) {
       quantity: 1,
     }],
     payment_intent_data: {
-      // Route funds to the league director's Stripe account
+      on_behalf_of: league.stripeConnectAccountId,
       transfer_data: {
         destination: league.stripeConnectAccountId,
       },
-      // Platform fee deducted before transfer
       application_fee_amount: platformFeeCents,
     },
     success_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${league.slug}/${registration.seasonId}?payment=cancelled`,
     metadata: { registrationId, leagueId: league.id, seasonId: registration.seasonId },
   });
-  // Note: NO stripeAccount option here — session runs on the platform account intentionally.
 
   return NextResponse.json({ url: session.url });
 }
