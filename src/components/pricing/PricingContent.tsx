@@ -103,9 +103,11 @@ export function PricingContent() {
             >
               {loading === tier.id
                 ? 'Redirecting…'
-                : isLoggedIn
-                  ? 'Purchase'
-                  : 'Create Account'}
+                : isLoggedIn === null
+                  ? '...'
+                  : isLoggedIn
+                    ? 'Purchase'
+                    : 'Create Account'}
             </button>
           </div>
         ))}
