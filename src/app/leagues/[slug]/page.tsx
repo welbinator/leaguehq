@@ -61,8 +61,8 @@ export default function LeaguePage({ params }: LeaguePageProps) {
 
   const currentSeason = league.seasons?.[0] ?? null;
   const emoji = SPORT_EMOJI[league.sport] ?? '🏆';
-  const teamCount = league._count?.teams ?? 0;
-  const playerCount = league._count?.registrations ?? 0;
+  const teamCount = league.teamRegCount ?? 0;
+  const playerCount = league.playerRegCount ?? 0;
 
   return (
     <div className="min-h-screen bg-navy">

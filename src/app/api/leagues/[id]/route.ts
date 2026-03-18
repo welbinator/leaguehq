@@ -22,7 +22,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       _count: {
         select: {
           teams: true,
-          registrations: { where: { status: 'APPROVED' } },
           games: true,
         },
       },
@@ -38,6 +37,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const [gamesPlayed, gamesRemaining] = await Promise.all([
     prisma.game.count({ where: { leagueId: league.id, status: 'COMPLETED' } }),
     prisma.game.count({ where: { leagueId: league.id, status: 'SCHEDULED', scheduledAt: { gte: now } } }),
+  ]);
+
+  // Count team registrations (the actual registration model)
+  const seasons = await prisma.season.findMany({ where: { leagueId: league.id }, select: { id: true } });
+  const seasonIds = seasons.map((s: any) => s.id);
+  const [teamRegCount, playerRegCount] = await Promise.all([
+    prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
+    prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
   ]);
 
   // Upcoming games
@@ -57,6 +64,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       gamesPlayed,
       gamesRemaining,
       upcomingGames,
+      teamRegCount,
+      playerRegCount,
     },
   });
 }
