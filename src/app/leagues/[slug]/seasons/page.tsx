@@ -252,15 +252,32 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/register/${slug}/${season.id}`);
-                        showToast('Registration link copied!');
-                      }}
-                      className="text-xs text-gray-400 hover:text-accent border border-white/10 hover:border-accent/30 px-3 py-1.5 rounded-lg transition-all"
-                    >
-                      Copy Link
-                    </button>
+                    {season.paymentRequired && !league?.stripeConnectAccountId ? (
+                      <div className="relative group">
+                        <button
+                          disabled
+                          className="text-xs text-gray-600 border border-white/5 px-3 py-1.5 rounded-lg cursor-not-allowed flex items-center gap-1.5"
+                        >
+                          🔒 Copy Link
+                        </button>
+                        <div className="absolute bottom-full right-0 mb-2 w-56 bg-surface-light border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                          <span className="font-semibold text-yellow-400">Stripe not connected</span><br />
+                          Connect your Stripe account in{' '}
+                          <a href={`/leagues/${slug}/settings`} className="text-accent underline pointer-events-auto">league settings</a>{' '}
+                          before sharing this link.
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/register/${slug}/${season.id}`);
+                          showToast('Registration link copied!');
+                        }}
+                        className="text-xs text-gray-400 hover:text-accent border border-white/10 hover:border-accent/30 px-3 py-1.5 rounded-lg transition-all"
+                      >
+                        Copy Link
+                      </button>
+                    )}
                     <button
                       onClick={() => setEditingSeason(season)}
                       className="text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
@@ -282,6 +299,7 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
           onClose={() => setCreateOpen(false)}
           leagueId={league.id}
           slug={slug}
+          stripeConnected={!!league?.stripeConnectAccountId}
           onCreated={() => {
             setCreateOpen(false);
             loadData();

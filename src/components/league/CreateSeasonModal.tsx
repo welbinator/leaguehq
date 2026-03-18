@@ -18,10 +18,11 @@ interface CreateSeasonModalProps {
   onClose: () => void;
   leagueId: string;
   slug: string;
+  stripeConnected: boolean;
   onCreated: (season: any) => void;
 }
 
-export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }: CreateSeasonModalProps) {
+export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, stripeConnected, onCreated }: CreateSeasonModalProps) {
   const [step, setStep] = useState(1);
   const totalSteps = 5; // 1:basics 2:free/paid 3:payment timing 4:divisions 5:success
 
@@ -440,16 +441,43 @@ export function CreateSeasonModal({ isOpen, onClose, leagueId, slug, onCreated }
         <div className="space-y-4 text-center py-2">
           <div className="text-5xl">🎉</div>
           <h3 className="text-lg font-bold text-white">{createdSeason.name} is ready!</h3>
-          <p className="text-sm text-gray-400">Share this registration link with your players:</p>
-          <div className="flex items-center gap-2 bg-navy rounded-lg border border-white/10 p-3 text-left">
-            <span className="text-xs text-accent flex-1 truncate">{registrationLink}</span>
-            <button
-              onClick={copyLink}
-              className="text-xs bg-accent text-navy font-semibold px-3 py-1.5 rounded-md hover:bg-accent/90 transition-colors flex-shrink-0"
-            >
-              Copy
-            </button>
-          </div>
+
+          {isPaid && !stripeConnected ? (
+            /* Paid season but no Stripe Connect — warn before they share the link */
+            <div className="text-left space-y-3">
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3">
+                <p className="text-yellow-400 text-sm font-semibold mb-1">⚠️ Connect Stripe before sharing</p>
+                <p className="text-gray-400 text-xs">
+                  This is a paid season. Players who register won&apos;t be able to pay until you connect your Stripe account.
+                  Set it up in league settings, then come back to copy the link.
+                </p>
+              </div>
+              <a
+                href={`/leagues/${slug}/settings`}
+                className="block w-full text-center bg-accent hover:bg-accent/90 text-navy font-bold py-2.5 rounded-xl text-sm transition-colors"
+              >
+                Set Up Stripe →
+              </a>
+              <p className="text-xs text-gray-500">
+                Registration link (available after Stripe is connected):<br />
+                <span className="text-gray-600 select-all break-all">{registrationLink}</span>
+              </p>
+            </div>
+          ) : (
+            /* Free season or Stripe connected — safe to share */
+            <>
+              <p className="text-sm text-gray-400">Share this registration link with your players:</p>
+              <div className="flex items-center gap-2 bg-navy rounded-lg border border-white/10 p-3 text-left">
+                <span className="text-xs text-accent flex-1 truncate">{registrationLink}</span>
+                <button
+                  onClick={copyLink}
+                  className="text-xs bg-accent text-navy font-semibold px-3 py-1.5 rounded-md hover:bg-accent/90 transition-colors flex-shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </Modal>
