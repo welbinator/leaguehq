@@ -109,8 +109,11 @@ export async function POST(req: NextRequest) {
   const platformFeeCents = Math.round(amountCents * 0.025);
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
+  // Session runs on platform account. customer_email ensures Stripe creates/matches a customer.
+  // After payment, webhook creates a matching customer on the connected account.
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
+    customer_creation: 'always',
     line_items: [{
       price_data: {
         currency: 'usd',
@@ -129,7 +132,13 @@ export async function POST(req: NextRequest) {
     },
     success_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=cancelled`,
-    metadata: { registrationId, leagueSlug, seasonId },
+    metadata: {
+      registrationId,
+      leagueSlug,
+      seasonId,
+      leagueStripeAccountId: leagueStripeAccountId!,
+      ...(playerEmail ? { playerEmail } : {}),
+    },
     ...(playerEmail ? { customer_email: playerEmail } : {}),
   };
   const session = await stripe.checkout.sessions.create(sessionParams);

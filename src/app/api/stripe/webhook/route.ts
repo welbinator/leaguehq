@@ -45,6 +45,28 @@ export async function POST(req: NextRequest) {
 
     // League registration payment
     const registrationId = session.metadata?.registrationId;
+
+    // Mirror customer to connected account so director sees them in their Stripe dashboard
+    const connectedAccountId = session.metadata?.leagueStripeAccountId;
+    const customerEmail = session.metadata?.playerEmail ?? (session as any).customer_details?.email;
+    if (connectedAccountId && customerEmail) {
+      try {
+        const existing = await stripe.customers.list(
+          { email: customerEmail, limit: 1 },
+          { stripeAccount: connectedAccountId }
+        );
+        if (existing.data.length === 0) {
+          await stripe.customers.create(
+            { email: customerEmail, metadata: { leagueHQRegistrationId: registrationId ?? '' } },
+            { stripeAccount: connectedAccountId }
+          );
+          console.log(`[webhook] Created customer ${customerEmail} on connected account ${connectedAccountId}`);
+        }
+      } catch (e) {
+        console.error('[webhook] Failed to mirror customer to connected account:', e);
+      }
+    }
+
     if (registrationId) {
       const amountTotal = session.amount_total ?? 0;
       const amountDollars = amountTotal / 100;
