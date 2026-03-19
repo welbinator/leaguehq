@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react';
 import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+
+interface SeasonDivision {
+  id: string;
+  division: { name: string };
+}
+
+interface Season {
+  id: string;
+  name: string;
+  status: string;
+  seasonDivisions: SeasonDivision[];
+}
 
 interface TeamReg {
   id: string;
@@ -18,14 +33,31 @@ interface TeamReg {
   seasonDivision: { division: { name: string } } | null;
 }
 
+const inputCls = 'w-full bg-navy border border-white/10 rounded-lg text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 placeholder-gray-500 appearance-none';
+const labelCls = 'block text-sm font-medium text-gray-300 mb-1.5';
+
 export default function TeamsPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const [leagueId, setLeagueId] = useState<string | null>(null);
   const [registrations, setRegistrations] = useState<TeamReg[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [updating, setUpdating] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Create team modal
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newCaptainName, setNewCaptainName] = useState('');
+  const [newCaptainEmail, setNewCaptainEmail] = useState('');
+  const [newCaptainPhone, setNewCaptainPhone] = useState('');
+  const [newSeasonId, setNewSeasonId] = useState('');
+  const [newDivisionId, setNewDivisionId] = useState('');
+  const [newAutoApprove, setNewAutoApprove] = useState(true);
+  const [newNotes, setNewNotes] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
@@ -36,13 +68,33 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
     const id = leagueJson.data.id;
     setLeagueId(id);
 
-    const regRes = await fetch(`/api/team-registrations?leagueId=${id}`);
-    const regJson = await regRes.json();
+    const [regRes, seasonRes] = await Promise.all([
+      fetch(`/api/team-registrations?leagueId=${id}`),
+      fetch(`/api/seasons?leagueId=${id}`),
+    ]);
+    const [regJson, seasonJson] = await Promise.all([regRes.json(), seasonRes.json()]);
     setRegistrations(regJson.data ?? []);
+    const seasonList: Season[] = seasonJson.data ?? [];
+    setSeasons(seasonList);
+
+    // Default season selector to first active/upcoming season
+    const defaultSeason = seasonList.find(s => s.status === 'ACTIVE' || s.status === 'UPCOMING') ?? seasonList[0];
+    if (defaultSeason) setNewSeasonId(defaultSeason.id);
+
     setLoading(false);
   }
 
   useEffect(() => { loadData(); }, [slug]);
+
+  // When season changes in modal, reset division
+  const selectedSeason = seasons.find(s => s.id === newSeasonId);
+  useEffect(() => {
+    if (selectedSeason?.seasonDivisions?.length === 1) {
+      setNewDivisionId(selectedSeason.seasonDivisions[0].id);
+    } else {
+      setNewDivisionId('');
+    }
+  }, [newSeasonId]);
 
   async function updateStatus(id: string, status: string) {
     setUpdating(id);
@@ -57,6 +109,60 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
       showToast(`Team ${status.toLowerCase()}`);
     }
     setUpdating(null);
+  }
+
+  function resetCreateForm() {
+    setNewTeamName(''); setNewCaptainName(''); setNewCaptainEmail('');
+    setNewCaptainPhone(''); setNewDivisionId(''); setNewAutoApprove(true);
+    setNewNotes(''); setCreateError('');
+    const defaultSeason = seasons.find(s => s.status === 'ACTIVE' || s.status === 'UPCOMING') ?? seasons[0];
+    if (defaultSeason) setNewSeasonId(defaultSeason.id);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTeamName.trim() || !newCaptainName.trim() || !newCaptainEmail.trim() || !newSeasonId) return;
+    setCreating(true);
+    setCreateError('');
+    try {
+      const res = await fetch('/api/registrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seasonId: newSeasonId,
+          seasonDivisionId: newDivisionId || null,
+          isCaptain: true,
+          teamName: newTeamName.trim(),
+          playerName: newCaptainName.trim(),
+          playerEmail: newCaptainEmail.trim(),
+          playerPhone: newCaptainPhone || null,
+          notes: newNotes || null,
+          // Director-created teams bypass the userId requirement
+          userId: null,
+          directorCreated: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setCreateError(json.message ?? json.error ?? 'Failed to create team'); return; }
+
+      // Auto-approve if toggled
+      if (newAutoApprove && json.data?.id) {
+        await fetch(`/api/team-registrations?id=${json.data.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'APPROVED' }),
+        });
+      }
+
+      setCreateOpen(false);
+      resetCreateForm();
+      showToast('Team created!');
+      await loadData();
+    } catch {
+      setCreateError('Something went wrong');
+    } finally {
+      setCreating(false);
+    }
   }
 
   const filtered = filter === 'ALL' ? registrations : registrations.filter(r => r.status === filter);
@@ -84,9 +190,12 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
       )}
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-white">Team Registrations</h1>
-          <p className="text-gray-400 text-sm mt-0.5">{registrations.length} registration{registrations.length !== 1 ? 's' : ''} total</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-black text-white">Team Registrations</h1>
+            <p className="text-gray-400 text-sm mt-0.5">{registrations.length} registration{registrations.length !== 1 ? 's' : ''} total</p>
+          </div>
+          <Button onClick={() => { resetCreateForm(); setCreateOpen(true); }}>+ Add Team</Button>
         </div>
 
         {/* Filter tabs */}
@@ -95,7 +204,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 filter === f ? 'bg-accent text-navy shadow' : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -117,9 +226,14 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
           <Card>
             <div className="text-center py-10">
               <div className="text-4xl mb-3">🏆</div>
-              <p className="text-gray-400 text-sm">
-                {filter === 'ALL' ? 'No registrations yet. Share your registration link to get teams signed up.' : `No ${filter.toLowerCase()} registrations.`}
+              <p className="text-gray-400 text-sm mb-4">
+                {filter === 'ALL' ? 'No registrations yet.' : `No ${filter.toLowerCase()} registrations.`}
               </p>
+              {filter === 'ALL' && (
+                <button onClick={() => { resetCreateForm(); setCreateOpen(true); }} className="text-accent text-sm hover:underline">
+                  Add a team manually →
+                </button>
+              )}
             </div>
           </Card>
         ) : (
@@ -198,12 +312,113 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                       Revoke
                     </button>
                   )}
+                  {reg.status === 'REJECTED' && (
+                    <button
+                      onClick={() => updateStatus(reg.id, 'APPROVED')}
+                      disabled={updating === reg.id}
+                      className="text-xs text-gray-500 hover:text-accent transition-colors disabled:opacity-50 flex-shrink-0"
+                    >
+                      Re-approve
+                    </button>
+                  )}
                 </div>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Create Team Modal */}
+      <Modal
+        isOpen={createOpen}
+        onClose={() => { setCreateOpen(false); resetCreateForm(); }}
+        title="Add Team"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => { setCreateOpen(false); resetCreateForm(); }}>Cancel</Button>
+            <Button type="submit" form="create-team-form" loading={creating}>Create Team</Button>
+          </>
+        }
+      >
+        <form id="create-team-form" onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className={labelCls}>Team Name *</label>
+            <input className={inputCls} value={newTeamName} onChange={e => setNewTeamName(e.target.value)} required placeholder="e.g. Thunder FC" />
+          </div>
+
+          <div className="border-t border-white/8 pt-4">
+            <p className="text-xs text-gray-500 mb-3">Captain / Contact Info</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Captain Name *</label>
+                <input className={inputCls} value={newCaptainName} onChange={e => setNewCaptainName(e.target.value)} required placeholder="Full name" />
+              </div>
+              <div>
+                <label className={labelCls}>Captain Email *</label>
+                <input className={inputCls} type="email" value={newCaptainEmail} onChange={e => setNewCaptainEmail(e.target.value)} required placeholder="captain@email.com" />
+              </div>
+              <div>
+                <label className={labelCls}>Captain Phone</label>
+                <input className={inputCls} type="tel" value={newCaptainPhone} onChange={e => setNewCaptainPhone(e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/8 pt-4">
+            <p className="text-xs text-gray-500 mb-3">Season & Division</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Season *</label>
+                {seasons.length === 0 ? (
+                  <p className="text-sm text-gray-500">No seasons found. Create a season first.</p>
+                ) : (
+                  <select className={inputCls} value={newSeasonId} onChange={e => setNewSeasonId(e.target.value)} required>
+                    <option value="" className="bg-navy">Select a season…</option>
+                    {seasons.map(s => (
+                      <option key={s.id} value={s.id} className="bg-navy">{s.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {selectedSeason && selectedSeason.seasonDivisions.length > 1 && (
+                <div>
+                  <label className={labelCls}>Division</label>
+                  <select className={inputCls} value={newDivisionId} onChange={e => setNewDivisionId(e.target.value)}>
+                    <option value="" className="bg-navy">— No division —</option>
+                    {selectedSeason.seasonDivisions.map(sd => (
+                      <option key={sd.id} value={sd.id} className="bg-navy">{sd.division.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Notes</label>
+            <textarea className={inputCls + ' resize-none'} rows={2} value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Optional notes" />
+          </div>
+
+          {/* Auto-approve toggle */}
+          <div
+            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${newAutoApprove ? 'border-accent bg-accent/5' : 'border-white/10'}`}
+            onClick={() => setNewAutoApprove(v => !v)}
+          >
+            <div>
+              <div className="text-sm font-medium text-white">Auto-approve this team</div>
+              <div className="text-xs text-gray-400 mt-0.5">Skip the pending state and mark as approved immediately</div>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${newAutoApprove ? 'bg-accent' : 'bg-white/10'}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${newAutoApprove ? 'left-5' : 'left-1'}`} />
+            </div>
+          </div>
+
+          {createError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm">{createError}</div>
+          )}
+        </form>
+      </Modal>
     </div>
   );
 }
