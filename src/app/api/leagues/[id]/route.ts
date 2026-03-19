@@ -42,9 +42,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // Count team registrations (the actual registration model)
   const seasons = await prisma.season.findMany({ where: { leagueId: league.id }, select: { id: true } });
   const seasonIds = seasons.map((s: any) => s.id);
+  // teamRegCount = unique teams (not rejected)
+  // playerRegCount = all registered individuals (captains + players), regardless of approval status
   const [teamRegCount, playerRegCount] = await Promise.all([
     prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
-    prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
+    prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds } } }),
   ]);
 
   // Upcoming games

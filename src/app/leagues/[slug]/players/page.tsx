@@ -33,7 +33,7 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
       const leagueId = leagueJson.data.id;
 
       const [regRes, playerRes] = await Promise.all([
-        fetch(`/api/team-registrations?leagueId=${leagueId}&status=APPROVED`),
+        fetch(`/api/team-registrations?leagueId=${leagueId}`),
         fetch(`/api/player-registrations?leagueId=${leagueId}`),
       ]);
       const [regJson, playerJson] = await Promise.all([regRes.json(), playerRes.json()]);
