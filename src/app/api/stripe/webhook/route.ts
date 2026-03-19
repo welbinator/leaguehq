@@ -48,19 +48,57 @@ export async function POST(req: NextRequest) {
     if (registrationId) {
       const amountTotal = session.amount_total ?? 0;
       const amountDollars = amountTotal / 100;
+      const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : null;
 
-      await prisma.teamRegistration.update({
-        where: { id: registrationId },
-        data: {
-          paymentStatus: 'paid',
-          paymentAmount: amountDollars,
-          stripeCheckoutSessionId: session.id,
-          stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-          paidAt: new Date(),
-          status: 'APPROVED',
-        },
-      });
-      console.log(`[webhook] Registration ${registrationId} paid $${amountDollars}`);
+      // Try SeasonEnrollment first (new flow), then PlayerRegistration, then TeamRegistration (legacy)
+      const enrollment = await prisma.seasonEnrollment.findUnique({ where: { id: registrationId } });
+      if (enrollment) {
+        await prisma.seasonEnrollment.update({
+          where: { id: registrationId },
+          data: {
+            paymentStatus: 'paid',
+            paymentAmount: amountDollars,
+            stripeCheckoutSessionId: session.id,
+            stripePaymentIntentId: paymentIntent,
+            paidAt: new Date(),
+            status: 'APPROVED',
+          },
+        });
+        console.log(`[webhook] SeasonEnrollment ${registrationId} paid $${amountDollars}`);
+      } else {
+        const playerReg = await prisma.playerRegistration.findUnique({ where: { id: registrationId } });
+        if (playerReg) {
+          await prisma.playerRegistration.update({
+            where: { id: registrationId },
+            data: {
+              paymentStatus: 'paid',
+              paymentAmount: amountDollars,
+              stripeCheckoutSessionId: session.id,
+              stripePaymentIntentId: paymentIntent,
+              paidAt: new Date(),
+            },
+          });
+          console.log(`[webhook] PlayerRegistration ${registrationId} paid $${amountDollars}`);
+        } else {
+          // Legacy TeamRegistration fallback
+          try {
+            await prisma.teamRegistration.update({
+              where: { id: registrationId },
+              data: {
+                paymentStatus: 'paid',
+                paymentAmount: amountDollars,
+                stripeCheckoutSessionId: session.id,
+                stripePaymentIntentId: paymentIntent,
+                paidAt: new Date(),
+                status: 'APPROVED',
+              },
+            });
+            console.log(`[webhook] TeamRegistration ${registrationId} paid $${amountDollars}`);
+          } catch (e) {
+            console.error(`[webhook] Could not find registration ${registrationId} in any table`, e);
+          }
+        }
+      }
     }
 
     return NextResponse.json({ received: true });
