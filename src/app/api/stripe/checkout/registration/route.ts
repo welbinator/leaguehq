@@ -109,30 +109,6 @@ export async function POST(req: NextRequest) {
   const platformFeeCents = Math.round(amountCents * 0.025);
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  // Create or retrieve a customer on the connected account so Stripe associates the payment with a customer
-  let connectedCustomerId: string | undefined;
-  if (playerEmail && leagueStripeAccountId) {
-    try {
-      // Search for existing customer on the connected account first
-      const existing = await stripe.customers.list(
-        { email: playerEmail, limit: 1 },
-        { stripeAccount: leagueStripeAccountId }
-      );
-      if (existing.data.length > 0) {
-        connectedCustomerId = existing.data[0].id;
-      } else {
-        const created = await stripe.customers.create(
-          { email: playerEmail, metadata: { leagueHQRegistrationId: registrationId } },
-          { stripeAccount: leagueStripeAccountId }
-        );
-        connectedCustomerId = created.id;
-      }
-    } catch (e) {
-      console.error('[checkout] Failed to create/find customer on connected account:', e);
-      // Non-fatal — proceed without customer
-    }
-  }
-
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     line_items: [{
@@ -154,9 +130,7 @@ export async function POST(req: NextRequest) {
     success_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=cancelled`,
     metadata: { registrationId, leagueSlug, seasonId },
-    ...(connectedCustomerId
-      ? { customer: connectedCustomerId }
-      : playerEmail ? { customer_email: playerEmail } : {}),
+    ...(playerEmail ? { customer_email: playerEmail } : {}),
   };
   const session = await stripe.checkout.sessions.create(sessionParams);
 
