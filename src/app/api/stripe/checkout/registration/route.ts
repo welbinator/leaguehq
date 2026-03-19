@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
         },
       },
       seasonDivision: true,
+      playerRegistrations: {
+        where: { isCaptain: true },
+        select: { playerEmail: true },
+        take: 1,
+      },
     },
   });
 
@@ -52,6 +57,7 @@ export async function POST(req: NextRequest) {
     teamName = enrollment.team.name;
     seasonName = enrollment.season.name;
     leagueName = league.name;
+    playerEmail = enrollment.playerRegistrations?.[0]?.playerEmail ?? null;
   } else {
     // Legacy: try TeamRegistration
     const isPlayer = registrationType === 'player';
