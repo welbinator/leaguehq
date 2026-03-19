@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   let teamName: string;
   let seasonName: string;
   let leagueName: string;
+  let playerEmail: string | null = null;
 
   // Try SeasonEnrollment first (new flow)
   const enrollment = await prisma.seasonEnrollment.findUnique({
@@ -93,6 +94,7 @@ export async function POST(req: NextRequest) {
     seasonId = registration.seasonId;
     leagueStripeAccountId = league.stripeConnectAccountId;
     teamName = registration.teamName ?? 'Player registration';
+    playerEmail = registration.playerEmail ?? null;
     seasonName = registration.season.name;
     leagueName = league.name;
   }
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest) {
     success_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=cancelled`,
     metadata: { registrationId, leagueSlug, seasonId },
+    ...(playerEmail ? { customer_email: playerEmail } : {}),
   };
   const session = await stripe.checkout.sessions.create(sessionParams);
 
