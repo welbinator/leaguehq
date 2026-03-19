@@ -52,3 +52,33 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ data: updated });
 }
+
+// PUT /api/team-registrations?id=... — full edit of a team registration
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const body = await req.json();
+  const { teamName, captainName, captainEmail, captainPhone, seasonDivisionId, notes } = body;
+
+  const updated = await prisma.teamRegistration.update({
+    where: { id },
+    data: {
+      ...(teamName !== undefined && { teamName }),
+      ...(captainName !== undefined && { captainName }),
+      ...(captainEmail !== undefined && { captainEmail }),
+      ...(captainPhone !== undefined && { captainPhone: captainPhone || null }),
+      ...(seasonDivisionId !== undefined && { seasonDivisionId: seasonDivisionId || null }),
+      ...(notes !== undefined && { notes: notes || null }),
+    },
+    include: {
+      season: { select: { id: true, name: true } },
+      seasonDivision: { include: { division: { select: { name: true } } } },
+    },
+  });
+
+  return NextResponse.json({ data: updated });
+}

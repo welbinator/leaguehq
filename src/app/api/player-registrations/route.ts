@@ -30,3 +30,34 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ data: players });
 }
+
+// PATCH /api/player-registrations?id=...
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const body = await req.json();
+  const { playerName, playerEmail, playerPhone, teamRegistrationId, seasonDivisionId } = body;
+
+  const updated = await prisma.playerRegistration.update({
+    where: { id },
+    data: {
+      ...(playerName !== undefined && { playerName }),
+      ...(playerEmail !== undefined && { playerEmail }),
+      ...(playerPhone !== undefined && { playerPhone }),
+      // null clears the team assignment; undefined means don't touch it
+      ...(teamRegistrationId !== undefined && { teamRegistrationId: teamRegistrationId || null }),
+      ...(seasonDivisionId !== undefined && { seasonDivisionId: seasonDivisionId || null }),
+    },
+    include: {
+      season: { select: { id: true, name: true } },
+      seasonDivision: { include: { division: { select: { name: true } } } },
+      teamRegistration: { select: { id: true, teamName: true } },
+    },
+  });
+
+  return NextResponse.json({ data: updated });
+}
