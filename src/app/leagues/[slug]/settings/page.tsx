@@ -86,8 +86,8 @@ export default function SettingsPage({ params }: SettingsPageProps) {
       showToast('Stripe connected successfully!');
       if (league?.id) loadStripeStatus(league.id);
     }
-    if (searchParams.get('connect_refresh') === '1') {
-      showToast('Stripe onboarding incomplete — please try again.', 'error');
+    if (searchParams.get('connect_error')) {
+      showToast('Stripe connection failed: ' + searchParams.get('connect_error'), 'error');
     }
   }, [searchParams, league?.id, loadStripeStatus]);
 
@@ -136,13 +136,13 @@ export default function SettingsPage({ params }: SettingsPageProps) {
     if (!confirm('Disconnect Stripe? Players will no longer be able to pay for this league.')) return;
     setDisconnecting(true);
     try {
-      const res = await fetch('/api/stripe/disconnect', {
-        method: 'POST',
+      const res = await fetch('/api/stripe/connect', {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leagueId: league.id }),
       });
       const json = await res.json();
-      if (json.success) {
+      if (json.ok) {
         setStripeStatus({ connected: false, complete: false });
         showToast('Stripe disconnected.');
       } else {
