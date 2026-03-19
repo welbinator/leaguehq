@@ -321,7 +321,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
                     <ol className="space-y-2 text-xs text-gray-400 list-none pl-0">
                       <li className="flex gap-2">
                         <span className="text-accent font-bold flex-shrink-0">1.</span>
-                        <span>Go to <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Stripe Dashboard → Developers → Webhooks</a> and click <strong className="text-white">Add endpoint</strong></span>
+                        <span>Go to <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Stripe Dashboard → Developers → Webhooks</a> and click <strong className="text-white">Add destination</strong></span>
                       </li>
                       <li className="flex gap-2">
                         <span className="text-accent font-bold flex-shrink-0">2.</span>
