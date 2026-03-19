@@ -42,7 +42,7 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedDivisionId, setSelectedDivisionId] = useState('');
   const [notes, setNotes] = useState('');
-  const [existingTeams, setExistingTeams] = useState<{ id: string; teamName: string; captainName: string }[]>([]);
+  const [existingTeams, setExistingTeams] = useState<{ id: string; teamName: string; enrollmentId?: string }[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamError, setTeamError] = useState('');
 
@@ -376,7 +376,7 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
                   ) : (
                     <select className={inputCls} value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)} required>
                       <option value="" className="bg-[#0a0f1e]">Select a team…</option>
-                      {existingTeams.map(t => <option key={t.id} value={t.id} className="bg-[#0a0f1e]">{t.teamName} (Captain: {t.captainName})</option>)}
+                      {existingTeams.map(t => <option key={t.id} value={t.id} className="bg-[#0a0f1e]">{t.teamName}</option>)}
                     </select>
                   )}
                 </div>

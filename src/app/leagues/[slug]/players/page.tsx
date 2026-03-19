@@ -196,10 +196,8 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
     return matchesStatus && matchesSeason && matchesSearch;
   });
 
-  // Teams available for the season the player is in
-  const teamsForSeason = editing
-    ? teams.filter(t => t.seasonId === editing.seasonId)
-    : [];
+  // All teams in the league are available for assignment
+  const teamsForSeason = teams;
 
   return (
     <div className="min-h-screen bg-navy">

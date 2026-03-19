@@ -195,6 +195,7 @@ model Season {
   registrations   Registration[]
   teamRegistrations TeamRegistration[]
   playerRegistrations PlayerRegistration[]
+  seasonEnrollments SeasonEnrollment[]
 
   @@index([leagueId])
   @@index([leagueId, status])
@@ -215,6 +216,7 @@ model SeasonDivision {
 
   teamRegistrations TeamRegistration[]
   playerRegistrations PlayerRegistration[]
+  seasonEnrollments SeasonEnrollment[]
 
   @@unique([seasonId, divisionId])
   @@index([seasonId])
@@ -244,6 +246,8 @@ model Team {
   awayGames     Game[]         @relation("AwayTeam")
   registrations Registration[]
   chatRooms     ChatRoom[]
+  seasonEnrollments SeasonEnrollment[]
+  playerRegistrations PlayerRegistration[] @relation("PlayerRegTeam")
 
   @@index([leagueId])
   @@index([divisionId])
@@ -394,7 +398,8 @@ model Referee {
   @@index([available])
 }
 
-// Public team registration submission (no auth required)
+// LEGACY: TeamRegistration is kept for backward compatibility.
+// New code should use Team + SeasonEnrollment instead.
 model TeamRegistration {
   id               String   @id @default(cuid())
   seasonId         String
@@ -429,7 +434,10 @@ model PlayerRegistration {
   id               String   @id @default(cuid())
   seasonId         String
   seasonDivisionId String?
-  teamRegistrationId String? // the team they're joining (null if free agent)
+  teamRegistrationId String? // LEGACY: use teamId + seasonEnrollmentId instead
+  teamId             String? // new: references Team directly
+  seasonEnrollmentId String? // new: references SeasonEnrollment
+  isCaptain          Boolean @default(false)
   userId           String?
   playerName       String
   playerEmail      String
@@ -443,12 +451,50 @@ model PlayerRegistration {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  season         Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  seasonDivision SeasonDivision?  @relation(fields: [seasonDivisionId], references: [id])
-  teamRegistration TeamRegistration? @relation(fields: [teamRegistrationId], references: [id])
-  user             User?             @relation("PlayerRegUser", fields: [userId], references: [id])
+  season            Season            @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonDivision    SeasonDivision?   @relation(fields: [seasonDivisionId], references: [id])
+  teamRegistration  TeamRegistration? @relation(fields: [teamRegistrationId], references: [id])
+  team              Team?             @relation("PlayerRegTeam", fields: [teamId], references: [id])
+  seasonEnrollment  SeasonEnrollment? @relation(fields: [seasonEnrollmentId], references: [id])
+  user              User?             @relation("PlayerRegUser", fields: [userId], references: [id])
 
   @@index([seasonId])
   @@index([teamRegistrationId])
+  @@index([teamId])
+  @@index([seasonEnrollmentId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// NEW: Team registration architecture
+// A SeasonEnrollment links a Team to a Season.
+// Replaces the season-scoping that was baked into TeamRegistration.
+// ─────────────────────────────────────────────
+
+model SeasonEnrollment {
+  id               String    @id @default(cuid())
+  teamId           String
+  seasonId         String
+  seasonDivisionId String?
+  status           String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  notes            String?
+
+  // Payment fields
+  paymentStatus           String?
+  paymentAmount           Decimal? @db.Decimal(10, 2)
+  stripePaymentIntentId   String?
+  stripeCheckoutSessionId String?
+  paidAt                  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team                Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season              Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonDivision      SeasonDivision? @relation(fields: [seasonDivisionId], references: [id])
+  playerRegistrations PlayerRegistration[]
+
+  @@unique([teamId, seasonId])
+  @@index([seasonId])
+  @@index([teamId])
 }

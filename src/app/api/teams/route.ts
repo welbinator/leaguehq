@@ -2,33 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 
-const createTeamSchema = z.object({
-  name: z.string().min(1).max(100),
-  leagueId: z.string(),
-  divisionId: z.string().optional(),
-  seasonId: z.string().optional(),
-});
-
-// GET /api/teams?leagueId=...
+// GET /api/teams?leagueId=... — list all teams for a league
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const leagueId = searchParams.get('leagueId');
-
-  const where = leagueId ? { leagueId } : {};
+  const leagueId = req.nextUrl.searchParams.get('leagueId');
+  if (!leagueId) return NextResponse.json({ error: 'leagueId required' }, { status: 400 });
 
   const teams = await prisma.team.findMany({
-    where,
+    where: { leagueId },
     include: {
-      coach: { select: { id: true, name: true, avatarUrl: true } },
-      captain: { select: { id: true, name: true, avatarUrl: true } },
-      _count: { select: { members: true } },
+      seasonEnrollments: {
+        include: {
+          season: { select: { id: true, name: true, status: true } },
+          seasonDivision: { include: { division: { select: { id: true, name: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
     },
     orderBy: { name: 'asc' },
   });
@@ -36,33 +28,31 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ data: teams });
 }
 
-// POST /api/teams
+// POST /api/teams — create a team (league-scoped, no season required)
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  try {
-    const body = await req.json();
-    const parsed = createTeamSchema.safeParse(body);
+  const { name, leagueId } = await req.json();
+  if (!name?.trim() || !leagueId) return NextResponse.json({ error: 'name and leagueId required' }, { status: 400 });
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.errors[0]?.message ?? 'Invalid input' },
-        { status: 400 }
-      );
-    }
+  // Verify league ownership
+  const league = await prisma.league.findFirst({
+    where: { id: leagueId, ownerId: (session.user as any).id },
+  });
+  if (!league) return NextResponse.json({ error: 'League not found or unauthorized' }, { status: 403 });
 
-    const { name, leagueId, divisionId, seasonId } = parsed.data;
+  const team = await prisma.team.create({
+    data: { name: name.trim(), leagueId },
+    include: {
+      seasonEnrollments: {
+        include: {
+          season: { select: { id: true, name: true, status: true } },
+          seasonDivision: { include: { division: { select: { id: true, name: true } } } },
+        },
+      },
+    },
+  });
 
-    const team = await prisma.team.create({
-      data: { name, leagueId, divisionId, seasonId },
-    });
-
-    return NextResponse.json({ data: team }, { status: 201 });
-  } catch (error) {
-    console.error('[POST /api/teams]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  return NextResponse.json({ data: team }, { status: 201 });
 }
