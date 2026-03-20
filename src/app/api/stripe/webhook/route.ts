@@ -46,8 +46,7 @@ export async function POST(req: NextRequest) {
     // League registration payment
     const registrationId = session.metadata?.registrationId;
 
-    // Safety net: ensure customer exists on connected account (checkout route pre-creates them,
-    // but this handles any edge cases where that failed)
+    // Mirror customer to connected account so director sees them in their Stripe dashboard
     const connectedAccountId = session.metadata?.leagueStripeAccountId;
     const customerEmail = session.metadata?.playerEmail ?? (session as any).customer_details?.email;
     if (connectedAccountId && customerEmail) {

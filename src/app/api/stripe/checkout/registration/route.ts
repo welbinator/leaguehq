@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
   let seasonName: string;
   let leagueName: string;
   let playerEmail: string | null = null;
-  let playerName: string | null = null;
 
   // Try SeasonEnrollment first (new flow)
   const enrollment = await prisma.seasonEnrollment.findUnique({
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
       seasonDivision: true,
       playerRegistrations: {
         where: { isCaptain: true },
-        select: { playerEmail: true, playerName: true },
+        select: { playerEmail: true },
         take: 1,
       },
     },
@@ -59,7 +58,6 @@ export async function POST(req: NextRequest) {
     seasonName = enrollment.season.name;
     leagueName = league.name;
     playerEmail = enrollment.playerRegistrations?.[0]?.playerEmail ?? null;
-    playerName = enrollment.playerRegistrations?.[0]?.playerName ?? null;
   } else {
     // Legacy: try TeamRegistration
     const isPlayer = registrationType === 'player';
@@ -103,7 +101,6 @@ export async function POST(req: NextRequest) {
     leagueStripeAccountId = league.stripeConnectAccountId;
     teamName = registration.teamName ?? 'Player registration';
     playerEmail = registration.playerEmail ?? null;
-    playerName = registration.playerName ?? null;
     seasonName = registration.season.name;
     leagueName = league.name;
   }
@@ -112,38 +109,8 @@ export async function POST(req: NextRequest) {
   const platformFeeCents = Math.round(amountCents * 0.025);
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  // Create or retrieve a customer on the connected account BEFORE creating the session.
-  // This ensures the charge is linked to the customer in the director's Stripe dashboard.
-  // We pass customer_creation: 'always' as a fallback, but pre-creating gives us the link.
-  let connectedCustomerId: string | undefined;
-  if (playerEmail && leagueStripeAccountId) {
-    try {
-      const existing = await stripe.customers.list(
-        { email: playerEmail, limit: 1 },
-        { stripeAccount: leagueStripeAccountId }
-      );
-      if (existing.data.length > 0) {
-        connectedCustomerId = existing.data[0].id;
-      } else {
-        const created = await stripe.customers.create(
-          {
-            email: playerEmail,
-            ...(playerName ? { name: playerName } : {}),
-            metadata: { leagueHQRegistrationId: registrationId },
-          },
-          { stripeAccount: leagueStripeAccountId }
-        );
-        connectedCustomerId = created.id;
-      }
-    } catch (e) {
-      // Non-fatal: fall back to customer_email if customer creation fails
-      console.error('[checkout] Failed to create/retrieve customer on connected account:', e);
-    }
-  }
-
-  // NOTE: The Checkout Session is created on the PLATFORM account (no stripeAccount header).
-  // We pass payment_intent_data.customer to link the charge to the connected account customer.
-  // This is the correct approach for destination charges with on_behalf_of.
+  // Session runs on platform account. customer_email ensures Stripe creates/matches a customer.
+  // After payment, webhook creates a matching customer on the connected account.
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     line_items: [{
@@ -161,7 +128,6 @@ export async function POST(req: NextRequest) {
       on_behalf_of: leagueStripeAccountId!,
       transfer_data: { destination: leagueStripeAccountId! },
       application_fee_amount: platformFeeCents,
-      ...(connectedCustomerId ? { customer: connectedCustomerId } : {}),
     },
     success_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=cancelled`,
@@ -172,10 +138,8 @@ export async function POST(req: NextRequest) {
       leagueStripeAccountId: leagueStripeAccountId!,
       ...(playerEmail ? { playerEmail } : {}),
     },
-    // Fall back to customer_email at session level if we couldn't get a connected customer
-    ...(!connectedCustomerId && playerEmail ? { customer_email: playerEmail } : {}),
+    ...(playerEmail ? { customer_email: playerEmail } : {}),
   };
-
   const session = await stripe.checkout.sessions.create(sessionParams);
 
   return NextResponse.json({ url: session.url });
