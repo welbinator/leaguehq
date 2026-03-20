@@ -113,6 +113,7 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
           playerPhone: phone || null,
           notes: notes || null,
           userId,
+          paymentRequired: season?.paymentRequired ?? false,
         }),
       });
       const json = await res.json();

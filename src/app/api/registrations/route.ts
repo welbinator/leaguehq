@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     seasonId, seasonDivisionId,
     isCaptain, teamName, existingTeamId,
     playerName, playerEmail, playerPhone, notes,
-    userId, directorCreated,
+    userId, directorCreated, paymentRequired,
   } = body;
 
   if (!seasonId || !playerName || !playerEmail) {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
           teamId: team.id,
           seasonId,
           seasonDivisionId: seasonDivisionId || null,
-          status: 'PENDING',
+          status: paymentRequired ? 'AWAITING_PAYMENT' : 'PENDING',
           notes: notes || null,
         },
       });
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         teamId: team.id,
         seasonEnrollmentId: enrollment.id,
         isCaptain: true,
+        paymentStatus: paymentRequired ? 'awaiting_payment' : null,
         userId: userId || null,
         playerName,
         playerEmail,

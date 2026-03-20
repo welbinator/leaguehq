@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
   // After payment, webhook creates a matching customer on the connected account.
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
-    customer_creation: 'always',
     line_items: [{
       price_data: {
         currency: 'usd',

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const seasonIds = league.seasons.map((s: any) => s.id);
     const [teamRegCount, playerRegCount] = await Promise.all([
       prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
-      prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds } } }),
+      prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds }, paymentStatus: { not: 'awaiting_payment' } } }),
     ]);
     return { ...league, teamRegCount, playerRegCount };
   }));

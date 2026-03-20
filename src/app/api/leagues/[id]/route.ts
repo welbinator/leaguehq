@@ -46,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // playerRegCount = all registered individuals (captains + players), regardless of approval status
   const [teamRegCount, playerRegCount] = await Promise.all([
     prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
-    prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds } } }),
+    prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds }, paymentStatus: { not: 'awaiting_payment' } } }),
   ]);
 
   // Upcoming games

@@ -86,6 +86,11 @@ export async function POST(req: NextRequest) {
             status: 'APPROVED',
           },
         });
+        // Also clear AWAITING_PAYMENT on associated PlayerRegistrations
+        await prisma.playerRegistration.updateMany({
+          where: { seasonEnrollmentId: registrationId, paymentStatus: 'awaiting_payment' },
+          data: { paymentStatus: 'paid', paidAt: new Date() },
+        });
         console.log(`[webhook] SeasonEnrollment ${registrationId} paid $${amountDollars}`);
       } else {
         const playerReg = await prisma.playerRegistration.findUnique({ where: { id: registrationId } });
