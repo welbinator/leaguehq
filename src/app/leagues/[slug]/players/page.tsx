@@ -113,7 +113,7 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
       email: r.playerEmail,
       phone: r.playerPhone ?? null,
       role: 'Player' as const,
-      teamName: r.teamRegistration?.teamName ?? 'No Team',
+      teamName: r.teamRegistration?.teamName ?? r.team?.name ?? 'No Team',
       teamRegistrationId: r.teamRegistration?.id ?? null,
       division: r.seasonDivision?.division?.name ?? null,
       season: r.season.name,

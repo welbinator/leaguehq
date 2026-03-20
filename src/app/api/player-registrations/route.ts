@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
       season: { select: { id: true, name: true } },
       seasonDivision: { include: { division: { select: { name: true } } } },
       teamRegistration: { select: { id: true, teamName: true, captainName: true } },
+      // New flow: team linked directly via teamId
+      team: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -48,7 +50,6 @@ export async function PATCH(req: NextRequest) {
       ...(playerName !== undefined && { playerName }),
       ...(playerEmail !== undefined && { playerEmail }),
       ...(playerPhone !== undefined && { playerPhone }),
-      // null clears the team assignment; undefined means don't touch it
       ...(teamRegistrationId !== undefined && { teamRegistrationId: teamRegistrationId || null }),
       ...(seasonDivisionId !== undefined && { seasonDivisionId: seasonDivisionId || null }),
     },
@@ -56,6 +57,7 @@ export async function PATCH(req: NextRequest) {
       season: { select: { id: true, name: true } },
       seasonDivision: { include: { division: { select: { name: true } } } },
       teamRegistration: { select: { id: true, teamName: true } },
+      team: { select: { id: true, name: true } },
     },
   });
 
