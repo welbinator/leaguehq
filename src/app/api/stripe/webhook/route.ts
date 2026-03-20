@@ -10,26 +10,43 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get('stripe-signature');
 
-  if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
+  if (!sig) {
+    return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
   }
 
+  // Determine if this is a Connect webhook (from a connected account) or a platform webhook.
+  // Connect events include an 'account' property in the raw payload.
+  // We try the Connect webhook secret first if available, then fall back to platform secret.
   let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err: any) {
-    console.error('[webhook] signature verification failed:', err.message);
-    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
+  const rawPayload = JSON.parse(body);
+  const isConnectEvent = !!rawPayload.account;
+
+  if (isConnectEvent && process.env.STRIPE_CONNECT_WEBHOOK_SECRET) {
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_CONNECT_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error('[webhook] Connect signature verification failed:', err.message);
+      return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
+    }
+  } else if (process.env.STRIPE_WEBHOOK_SECRET) {
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error('[webhook] Platform signature verification failed:', err.message);
+      return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
+    }
+  } else {
+    return NextResponse.json({ error: 'No webhook secret configured' }, { status: 400 });
   }
 
   // ──────────────────────────────────────────────
   // Checkout session completed
-  // Could be a subscription checkout OR a registration payment — check metadata to distinguish
+  // Could be a platform subscription checkout OR a connected account registration payment
   // ──────────────────────────────────────────────
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    // Subscription checkout (platform plan purchase)
+    // Platform subscription checkout (director buying a LeagueHQ plan)
     if (session.mode === 'subscription' && session.metadata?.userId) {
       const tier = session.metadata.tier ?? 'STARTER';
       await prisma.user.update({
@@ -43,34 +60,15 @@ export async function POST(req: NextRequest) {
       console.log(`[webhook] User ${session.metadata.userId} subscribed to ${tier}`);
     }
 
-    // League registration payment
+    // League registration payment (fired from connected account via Connect webhook)
     const registrationId = session.metadata?.registrationId;
-
-    // Mirror customer to connected account so director sees them in their Stripe dashboard
-    const connectedAccountId = session.metadata?.leagueStripeAccountId;
-    const customerEmail = session.metadata?.playerEmail ?? (session as any).customer_details?.email;
-    if (connectedAccountId && customerEmail) {
-      try {
-        const existing = await stripe.customers.list(
-          { email: customerEmail, limit: 1 },
-          { stripeAccount: connectedAccountId }
-        );
-        if (existing.data.length === 0) {
-          await stripe.customers.create(
-            { email: customerEmail, metadata: { leagueHQRegistrationId: registrationId ?? '' } },
-            { stripeAccount: connectedAccountId }
-          );
-          console.log(`[webhook] Created customer ${customerEmail} on connected account ${connectedAccountId}`);
-        }
-      } catch (e) {
-        console.error('[webhook] Failed to mirror customer to connected account:', e);
-      }
-    }
-
     if (registrationId) {
       const amountTotal = session.amount_total ?? 0;
       const amountDollars = amountTotal / 100;
       const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : null;
+      const connectedAccountId = (rawPayload.account as string) ?? session.metadata?.leagueStripeAccountId ?? null;
+
+      console.log(`[webhook] Registration payment received — registrationId: ${registrationId}, account: ${connectedAccountId}, amount: $${amountDollars}`);
 
       // Try SeasonEnrollment first (new flow), then PlayerRegistration, then TeamRegistration (legacy)
       const enrollment = await prisma.seasonEnrollment.findUnique({ where: { id: registrationId } });
@@ -86,7 +84,6 @@ export async function POST(req: NextRequest) {
             status: 'APPROVED',
           },
         });
-        // Also clear AWAITING_PAYMENT on associated PlayerRegistrations
         await prisma.playerRegistration.updateMany({
           where: { seasonEnrollmentId: registrationId, paymentStatus: 'awaiting_payment' },
           data: { paymentStatus: 'paid', paidAt: new Date() },
@@ -107,7 +104,6 @@ export async function POST(req: NextRequest) {
           });
           console.log(`[webhook] PlayerRegistration ${registrationId} paid $${amountDollars}`);
         } else {
-          // Legacy TeamRegistration fallback
           try {
             await prisma.teamRegistration.update({
               where: { id: registrationId },
@@ -132,8 +128,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ──────────────────────────────────────────────
-  // Subscription updated or cancelled
-  // Fired when: plan changes, cancellation, end of billing period, etc.
+  // Subscription updated or cancelled (platform events only)
   // ──────────────────────────────────────────────
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const sub = event.data.object as Stripe.Subscription;
@@ -146,10 +141,8 @@ export async function POST(req: NextRequest) {
       } else if (sub.status === 'past_due') {
         status = 'PAST_DUE';
       } else {
-        // canceled, unpaid, incomplete_expired, etc.
         status = 'INACTIVE';
       }
-
       await prisma.user.update({
         where: { id: user.id },
         data: { subscriptionStatus: status },
@@ -161,9 +154,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ──────────────────────────────────────────────
-  // Payment failed (e.g. card declined on renewal)
-  // Mark user PAST_DUE immediately so the dashboard reflects it
-  // Stripe will retry and eventually cancel → triggers subscription.updated above
+  // Payment failed on subscription renewal
   // ──────────────────────────────────────────────
   if (event.type === 'invoice.payment_failed') {
     const invoice = event.data.object as Stripe.Invoice;

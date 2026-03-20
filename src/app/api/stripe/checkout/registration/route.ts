@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
 // POST /api/stripe/checkout/registration
-// Supports both new (SeasonEnrollment) and legacy (TeamRegistration) flows.
+// Creates a Checkout Session directly on the connected account (director's Stripe).
+// This ensures charges and customers are fully linked in the director's Stripe dashboard.
+// Platform fee is collected via application_fee_amount — automatically transferred to platform.
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
@@ -107,10 +109,12 @@ export async function POST(req: NextRequest) {
 
   const amountCents = Math.round(priceAmount * 100);
   const platformFeeCents = Math.round(amountCents * 0.025);
+
+  // Use platform secret key but target the connected account via stripeAccount option.
+  // This creates the session directly on the director's Stripe account so charges and
+  // customers are natively linked in their dashboard.
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
-  // Session runs on platform account. customer_email ensures Stripe creates/matches a customer.
-  // After payment, webhook creates a matching customer on the connected account.
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     line_items: [{
@@ -125,10 +129,10 @@ export async function POST(req: NextRequest) {
       quantity: 1,
     }],
     payment_intent_data: {
-      on_behalf_of: leagueStripeAccountId!,
-      transfer_data: { destination: leagueStripeAccountId! },
+      // application_fee_amount is automatically transferred to the platform account
       application_fee_amount: platformFeeCents,
     },
+    customer_creation: 'always',
     success_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=success&reg=${registrationId}`,
     cancel_url: `${appUrl}/register/${leagueSlug}/${seasonId}?payment=cancelled`,
     metadata: {
@@ -140,7 +144,11 @@ export async function POST(req: NextRequest) {
     },
     ...(playerEmail ? { customer_email: playerEmail } : {}),
   };
-  const session = await stripe.checkout.sessions.create(sessionParams);
+
+  // Create session on the connected account — this is the key change
+  const session = await stripe.checkout.sessions.create(sessionParams, {
+    stripeAccount: leagueStripeAccountId!,
+  });
 
   return NextResponse.json({ url: session.url });
 }
