@@ -107,7 +107,7 @@ export function PricingContent() {
                   ? '...'
                   : isLoggedIn
                     ? 'Purchase'
-                    : 'Create Account'}
+                    : 'Get Started'}
             </button>
           </div>
         ))}

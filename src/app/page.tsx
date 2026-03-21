@@ -272,7 +272,7 @@ export default function LandingPage() {
                 </ul>
 
                 <Link
-                  href="/pricing"
+                  href="/register"
                   className={`block text-center font-bold py-3 px-6 rounded-xl transition-all duration-200 ${
                     tier.highlighted
                       ? 'bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/25'
@@ -302,7 +302,7 @@ export default function LandingPage() {
               Join hundreds of league organizers who've ditched the chaos and moved to LeagueHQ.
             </p>
             <Link
-              href="/pricing"
+              href="/register"
               className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-bold px-8 py-4 rounded-xl text-lg transition-all duration-200 shadow-2xl shadow-accent/25"
             >
               Get Started Today
