@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -155,7 +154,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -163,7 +162,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
 
   if (!league) {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <p className="text-gray-400 mb-4">League not found.</p>
           <Link href="/dashboard" className="text-accent hover:underline text-sm">← Dashboard</Link>
@@ -175,8 +174,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
   const stripeFullyConnected = stripeStatus?.connected && stripeStatus?.complete && stripeStatus?.chargesEnabled;
 
   return (
-    <div className="min-h-screen bg-navy">
-      <LeagueNav slug={slug} />
+    <div>
 
       {toast && (
         <div className={`fixed top-4 right-4 z-50 font-semibold px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in ${

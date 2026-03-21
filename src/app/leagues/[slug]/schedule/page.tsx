@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
-import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 import type { GameStatus } from '@/types';
 
@@ -38,8 +37,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   }, [slug]);
 
   return (
-    <div className="min-h-screen bg-navy">
-      <LeagueNav slug={slug} />
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

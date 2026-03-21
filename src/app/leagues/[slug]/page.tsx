@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
-import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 import { CreateSeasonModal } from '@/components/league/CreateSeasonModal';
 
@@ -40,7 +39,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -48,7 +47,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
 
   if (error || !league) {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="text-5xl mb-4">🏆</div>
           <h2 className="text-xl font-bold text-white mb-2">League not found</h2>
@@ -65,8 +64,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
   const playerCount = league.playerRegCount ?? 0;
 
   return (
-    <div className="min-h-screen bg-navy">
-      <LeagueNav slug={slug} />
+    <div>
 
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-accent text-navy font-semibold px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in">
