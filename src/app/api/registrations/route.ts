@@ -1,13 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Plan limits: max players per league per season (null = unlimited)
+// Plan limits: max active/upcoming players across all leagues owned by the director (null = unlimited)
 const PLAN_LIMITS: Record<string, number | null> = {
   FREE:    0,    // FREE tier can't collect registrations at all
   STARTER: 100,
   GROWTH:  500,
   PRO:     null, // unlimited
 };
+
+// Count players registered in ACTIVE or UPCOMING seasons across all leagues owned by this director.
+async function countActivePlayers(directorId: string): Promise<number> {
+  return prisma.playerRegistration.count({
+    where: {
+      season: {
+        status: { in: ['ACTIVE', 'UPCOMING'] },
+        league: { ownerId: directorId },
+      },
+    },
+  });
+}
+
+// After a successful registration, check if the plan limit has been reached.
+// If so, automatically close registration on this season.
+async function maybeAutoCloseRegistration(
+  seasonId: string,
+  directorId: string,
+  owner: { subscriptionTier: string; subscriptionStatus: string } | null
+) {
+  const tier = owner?.subscriptionTier ?? 'FREE';
+  const isActive = owner?.subscriptionStatus === 'ACTIVE';
+  const limit = isActive ? (PLAN_LIMITS[tier] ?? null) : PLAN_LIMITS['FREE'];
+
+  if (limit === null) return; // unlimited plan, nothing to do
+
+  const currentCount = await countActivePlayers(directorId);
+
+  if (currentCount >= limit) {
+    await prisma.season.update({
+      where: { id: seasonId },
+      data: { registrationOpen: false },
+    });
+    console.log(`[registrations] Auto-closed season ${seasonId} — plan limit ${limit} reached (${currentCount} active players for director ${directorId})`);
+  }
+}
 
 // POST /api/registrations — public, no auth required
 // Handles both captain (team) and player registrations using the new
@@ -33,6 +69,7 @@ export async function POST(req: NextRequest) {
       leagueId: true,
       league: {
         select: {
+          ownerId: true,
           owner: {
             select: { subscriptionTier: true, subscriptionStatus: true },
           },
@@ -42,26 +79,24 @@ export async function POST(req: NextRequest) {
   });
   if (!season) return NextResponse.json({ error: 'Season not found' }, { status: 404 });
 
-  // Directors can bypass the registration open check
+  // Directors can bypass the registration open check and plan limits
   if (!directorCreated && !season.registrationOpen) {
     return NextResponse.json({ error: 'Registration is not currently open for this season.' }, { status: 403 });
   }
 
-  // Enforce plan player limits (directors bypass this too)
+  // Enforce plan player limits (directors bypass this)
   if (!directorCreated) {
     const owner = season.league.owner;
+    const directorId = season.league.ownerId;
     const tier = owner?.subscriptionTier ?? 'FREE';
     const isActive = owner?.subscriptionStatus === 'ACTIVE';
     const limit = isActive ? (PLAN_LIMITS[tier] ?? null) : PLAN_LIMITS['FREE'];
 
     if (limit !== null) {
-      // Count all players registered for this league across all seasons
-      const currentCount = await prisma.playerRegistration.count({
-        where: { season: { leagueId: season.leagueId } },
-      });
+      const currentCount = await countActivePlayers(directorId);
 
       if (currentCount >= limit) {
-        // Auto-close registration on this season since we're at the limit
+        // Auto-close registration since limit is already reached
         await prisma.season.update({
           where: { id: seasonId },
           data: { registrationOpen: false },
@@ -125,8 +160,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // After registering, check if we've now hit the plan limit and auto-close if so
-    await maybeAutoCloseRegistration(seasonId, season.leagueId, season.league.owner);
+    await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
     return NextResponse.json({ data: { ...enrollment, captainRegistrationId: captainReg.id, id: enrollment.id } }, { status: 201 });
   }
@@ -165,34 +199,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // After registering, check if we've now hit the plan limit and auto-close if so
-  await maybeAutoCloseRegistration(seasonId, season.leagueId, season.league.owner);
+  await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
   return NextResponse.json({ data: playerReg }, { status: 201 });
-}
-
-// After a successful registration, check if the plan limit has been reached.
-// If so, automatically close registration on this season.
-async function maybeAutoCloseRegistration(
-  seasonId: string,
-  leagueId: string,
-  owner: { subscriptionTier: string; subscriptionStatus: string } | null
-) {
-  const tier = owner?.subscriptionTier ?? 'FREE';
-  const isActive = owner?.subscriptionStatus === 'ACTIVE';
-  const limit = isActive ? (PLAN_LIMITS[tier] ?? null) : PLAN_LIMITS['FREE'];
-
-  if (limit === null) return; // unlimited plan, nothing to do
-
-  const currentCount = await prisma.playerRegistration.count({
-    where: { season: { leagueId } },
-  });
-
-  if (currentCount >= limit) {
-    await prisma.season.update({
-      where: { id: seasonId },
-      data: { registrationOpen: false },
-    });
-    console.log(`[registrations] Auto-closed season ${seasonId} — player limit ${limit} reached (${currentCount} players)`);
-  }
 }
