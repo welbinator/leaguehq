@@ -17,6 +17,13 @@ export async function GET() {
       id: true,
       email: true,
       name: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
       role: true,
       avatarUrl: true,
       subscriptionTier: true,
@@ -78,9 +85,17 @@ export async function PATCH(req: NextRequest) {
 
   const updates: any = {};
 
-  if (name?.trim()) {
-    updates.name = name.trim();
-  }
+  if (name?.trim()) updates.name = name.trim();
+
+  // Profile fields
+  const { firstName, lastName, phone, address, city, state, zip } = body;
+  if (firstName !== undefined) updates.firstName = firstName?.trim() || null;
+  if (lastName  !== undefined) updates.lastName  = lastName?.trim()  || null;
+  if (phone     !== undefined) updates.phone     = phone?.trim()     || null;
+  if (address   !== undefined) updates.address   = address?.trim()   || null;
+  if (city      !== undefined) updates.city      = city?.trim()      || null;
+  if (state     !== undefined) updates.state     = state?.trim()     || null;
+  if (zip       !== undefined) updates.zip       = zip?.trim()       || null;
 
   if (newPassword) {
     if (!currentPassword) {
@@ -103,7 +118,7 @@ export async function PATCH(req: NextRequest) {
   const updated = await prisma.user.update({
     where: { id: userId },
     data: updates,
-    select: { id: true, email: true, name: true, role: true, avatarUrl: true },
+    select: { id: true, email: true, name: true, firstName: true, lastName: true, phone: true, address: true, city: true, state: true, zip: true, role: true, avatarUrl: true },
   });
 
   return NextResponse.json({ data: updated });
