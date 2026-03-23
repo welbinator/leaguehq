@@ -177,8 +177,14 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
         <div className="max-w-md w-full text-center">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-black text-white mb-2">Payment confirmed!</h1>
-          <p className="text-gray-400">Your payment was successful and your registration is confirmed.</p>
-          <p className="text-gray-500 text-sm mt-3">The league director will be in touch with next steps.</p>
+          <p className="text-gray-400 mb-4">Your payment was successful and your registration is confirmed.</p>
+          <a
+            href="/dashboard/player"
+            className="inline-block bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold px-6 py-3 rounded-xl transition-colors"
+          >
+            Go to My Dashboard →
+          </a>
+          <p className="text-gray-500 text-sm mt-4">The league director will be in touch with next steps.</p>
         </div>
       </div>
     );
@@ -191,13 +197,25 @@ export default function RegisterPage({ params }: { params: { slug: string; seaso
         <div className="max-w-md w-full text-center">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-black text-white mb-2">You&apos;re registered!</h1>
-          <p className="text-gray-400 mb-1">
+          <p className="text-gray-400 mb-4">
             {isExistingAccount ? 'Welcome back! Your registration is submitted.' : 'Your account has been created and your registration is submitted.'}
           </p>
-          {!isExistingAccount && (
-            <p className="text-gray-500 text-sm mt-2">You can now <a href="/login" className="text-[#22c55e] hover:underline">log in</a> with your email and password.</p>
+          {isExistingAccount ? (
+            <a
+              href="/dashboard/player"
+              className="inline-block bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold px-6 py-3 rounded-xl transition-colors"
+            >
+              Go to My Dashboard →
+            </a>
+          ) : (
+            <a
+              href="/login?registered=1"
+              className="inline-block bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold px-6 py-3 rounded-xl transition-colors"
+            >
+              Log in to your account →
+            </a>
           )}
-          <p className="text-gray-500 text-sm mt-3">The league director will be in touch with next steps.</p>
+          <p className="text-gray-500 text-sm mt-4">The league director will be in touch with next steps.</p>
         </div>
       </div>
     );

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { LeagueCard } from '@/components/league/LeagueCard';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +18,8 @@ const SPORTS = [
 export const dynamic = 'force-dynamic';
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthRevenue, setMonthRevenue] = useState(0);
@@ -51,6 +55,15 @@ export default function DashboardPage() {
       console.error('Failed to fetch subscription status', err);
     }
   }
+
+  // Redirect players/captains to their own dashboard
+  useEffect(() => {
+    if (status === 'loading') return;
+    const role = (session?.user as any)?.role;
+    if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
+      router.replace('/dashboard/player');
+    }
+  }, [session, status, router]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

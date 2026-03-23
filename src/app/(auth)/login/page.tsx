@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,8 +32,20 @@ export default function LoginPage() {
         setError(result.error);
       } else {
         const params = new URLSearchParams(window.location.search);
-        const nextUrl = params.get('next') ?? '/dashboard';
-        router.push(nextUrl);
+        const next = params.get('next');
+        if (next) {
+          router.push(next);
+        } else {
+          // Route based on role
+          const res = await fetch('/api/account');
+          const json = await res.json();
+          const role = json.data?.role;
+          if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
+            router.push('/dashboard/player');
+          } else {
+            router.push('/dashboard');
+          }
+        }
         router.refresh();
       }
     } catch {
@@ -133,6 +147,13 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {registered && (
+              <div className="bg-accent/10 border border-accent/20 rounded-lg px-4 py-3 text-sm text-accent flex items-center gap-2">
+                <span>🎉</span>
+                <span>Account created! Log in to access your player dashboard.</span>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
                 {error}
@@ -158,5 +179,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
