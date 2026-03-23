@@ -18,7 +18,9 @@ const SPORTS = [
 export const dynamic = 'force-dynamic';
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
+  const status = sessionResult?.status;
   const router = useRouter();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
