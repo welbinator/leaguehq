@@ -96,32 +96,13 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Gated for non-free tiers
-  if (subscriptionTier === 'FREE') {
-    return (
-      <Card>
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="text-5xl mb-4">🔒</div>
-          <h3 className="text-xl font-bold text-white mb-2">Schedule Generator</h3>
-          <p className="text-gray-400 mb-6 max-w-sm">
-            Automatically generate round-robin or playoff schedules for your league. Available on Starter and above.
-          </p>
-          <Button onClick={() => window.location.href = '/pricing'}>
-            Upgrade to Unlock
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    if (subscriptionTier === 'FREE') return;
     fetch(`/api/seasons?leagueId=${leagueId}`)
       .then(r => r.json())
       .then(j => setSeasons(j.data ?? []));
-  }, [leagueId]);
+  }, [leagueId, subscriptionTier]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (!selectedSeason) { setDivisions([]); setSelectedDivision(''); return; }
     fetch(`/api/seasons/${selectedSeason}`)
@@ -133,7 +114,6 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
       });
   }, [selectedSeason]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (!selectedDivision || !selectedSeason) { setTeams([]); setSelectedTeams([]); return; }
     fetch(`/api/teams?leagueId=${leagueId}&divisionId=${selectedDivision}&seasonId=${selectedSeason}`)
@@ -214,6 +194,23 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
       setSaving(false);
     }
   };
+
+  if (subscriptionTier === 'FREE') {
+    return (
+      <Card>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h3 className="text-xl font-bold text-white mb-2">Schedule Generator</h3>
+          <p className="text-gray-400 mb-6 max-w-sm">
+            Automatically generate round-robin or playoff schedules for your league. Available on Starter and above.
+          </p>
+          <Button onClick={() => window.location.href = '/pricing'}>
+            Upgrade to Unlock
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
