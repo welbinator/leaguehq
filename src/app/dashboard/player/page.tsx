@@ -27,14 +27,7 @@ const US_STATES = [
   'VA','WA','WV','WI','WY',
 ];
 
-const DUMMY_GAMES = [
-  { id: 1, date: 'Tue, Apr 8',  time: '7:00 PM',  opponent: 'Thunder Hawks',  location: 'Field 3 — Riverside Park',  result: null },
-  { id: 2, date: 'Tue, Apr 15', time: '7:00 PM',  opponent: 'Iron Wolves',    location: 'Field 1 — Riverside Park',  result: null },
-  { id: 3, date: 'Sat, Apr 19', time: '10:00 AM', opponent: 'Blue Lightning', location: 'Field 2 — Elmwood Complex', result: null },
-  { id: 4, date: 'Tue, Mar 25', time: '7:00 PM',  opponent: 'Red Devils',     location: 'Field 3 — Riverside Park',  result: 'W 3–1' },
-  { id: 5, date: 'Tue, Mar 18', time: '8:30 PM',  opponent: 'Storm United',   location: 'Field 1 — Riverside Park',  result: 'L 0–2' },
-  { id: 6, date: 'Sat, Mar 8',  time: '11:00 AM', opponent: 'Falcon City FC', location: 'Field 4 — Elmwood Complex', result: 'W 2–2 (PKs)' },
-];
+
 
 const DUMMY_ROOMS = [
   {
@@ -66,6 +59,93 @@ const DUMMY_ROOMS = [
     ],
   },
 ];
+
+
+// ─── Player Schedule Tab Component ───────────────────────────────────────────
+
+function PlayerScheduleTab({ userId }: { userId?: string }) {
+  const [games, setGames] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    fetch(`/api/games?userId=${userId}`)
+      .then(r => r.json())
+      .then(j => setGames(j.data ?? []))
+      .catch(() => setGames([]))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const now = new Date();
+  const upcoming = games.filter(g => new Date(g.scheduledAt) >= now);
+  const past = games.filter(g => new Date(g.scheduledAt) < now).reverse();
+
+  if (!games.length) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="text-5xl mb-4">📅</div>
+      <h3 className="text-xl font-bold text-white mb-2">No games scheduled yet</h3>
+      <p className="text-gray-400 text-sm">Your games will appear here once the league director publishes a schedule.</p>
+    </div>
+  );
+
+  const renderGame = (game: any, i: number, arr: any[], isPast: boolean) => {
+    const d = new Date(game.scheduledAt);
+    const month = d.toLocaleDateString('en-US', { month: 'short' });
+    const day = d.getDate();
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    return (
+      <div key={game.id} className="flex items-center gap-4 p-3 bg-navy rounded-xl border border-white/[0.06]">
+        <div className="text-center w-16 flex-shrink-0">
+          <p className={`font-black text-sm leading-tight ${isPast ? 'text-gray-400' : 'text-accent'}`}>{weekday}</p>
+          <p className={`text-lg font-black ${isPast ? 'text-gray-500' : 'text-white'}`}>{day}</p>
+          <p className="text-xs text-gray-500">{month}</p>
+        </div>
+        <div className="w-px h-10 bg-white/10 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-semibold text-sm">
+            {game.homeTeam?.name} <span className="text-gray-500 font-normal">vs</span> {game.awayTeam?.name}
+          </p>
+          <p className="text-gray-400 text-xs mt-0.5 truncate">
+            {game.location && `📍 ${game.location} · `}{time}
+            {game.division && ` · ${game.division.name}`}
+          </p>
+        </div>
+        {game.status === 'COMPLETED' && game.homeScore != null && (
+          <span className="text-accent font-black text-sm">{game.homeScore}–{game.awayScore}</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      {upcoming.length > 0 && (
+        <Card>
+          <h2 className="text-lg font-bold text-white mb-4">Upcoming Games</h2>
+          <div className="space-y-3">
+            {upcoming.map((g, i, a) => renderGame(g, i, a, false))}
+          </div>
+        </Card>
+      )}
+      {past.length > 0 && (
+        <Card>
+          <h2 className="text-lg font-bold text-white mb-4">Recent Results</h2>
+          <div className="space-y-3 opacity-80">
+            {past.map((g, i, a) => renderGame(g, i, a, true))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 export default function PlayerDashboard() {
   const sessionResult = useSession();
@@ -165,8 +245,7 @@ export default function PlayerDashboard() {
   }
 
   const role = (session?.user as any)?.role ?? user?.role;
-  const upcomingGames = DUMMY_GAMES.filter(g => !g.result);
-  const pastGames     = DUMMY_GAMES.filter(g =>  g.result);
+
 
   if (loading || status === 'loading') {
     return (
@@ -464,55 +543,7 @@ export default function PlayerDashboard() {
 
           {/* ── SCHEDULE TAB ────────────────────────────────────── */}
           {activeTab === 'schedule' && (
-            <div className="space-y-5">
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-yellow-300 text-sm flex items-center gap-2">
-                <span>🚧</span>
-                <span>Scheduling is coming soon. Below is a preview of what it'll look like.</span>
-              </div>
-
-              <Card>
-                <h2 className="text-lg font-bold text-white mb-4">Upcoming Games</h2>
-                <div className="space-y-3">
-                  {upcomingGames.map(game => (
-                    <div key={game.id} className="flex items-center gap-4 p-3 bg-navy rounded-xl border border-white/[0.06]">
-                      <div className="text-center w-16 flex-shrink-0">
-                        <p className="text-accent font-black text-sm leading-tight">{game.date.split(',')[0]}</p>
-                        <p className="text-white text-xs">{game.date.split(', ')[1]}</p>
-                      </div>
-                      <div className="w-px h-10 bg-white/10 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm">vs {game.opponent}</p>
-                        <p className="text-gray-400 text-xs mt-0.5 truncate">📍 {game.location} · {game.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card>
-                <h2 className="text-lg font-bold text-white mb-4">Recent Results</h2>
-                <div className="space-y-3">
-                  {pastGames.map(game => (
-                    <div key={game.id} className="flex items-center gap-4 p-3 bg-navy rounded-xl border border-white/[0.06]">
-                      <div className="text-center w-16 flex-shrink-0">
-                        <p className="text-gray-400 font-bold text-sm leading-tight">{game.date.split(',')[0]}</p>
-                        <p className="text-gray-500 text-xs">{game.date.split(', ')[1]}</p>
-                      </div>
-                      <div className="w-px h-10 bg-white/10 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm">vs {game.opponent}</p>
-                        <p className="text-gray-400 text-xs mt-0.5 truncate">📍 {game.location}</p>
-                      </div>
-                      <span className={`text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0 ${
-                        game.result?.startsWith('W') ? 'bg-accent/20 text-accent' :
-                        game.result?.startsWith('L') ? 'bg-red-500/20 text-red-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>{game.result}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
+            <PlayerScheduleTab userId={(session?.user as any)?.id} />
           )}
 
           {/* ── CHAT TAB ────────────────────────────────────────── */}

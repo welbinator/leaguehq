@@ -285,6 +285,7 @@ model Game {
   status      GameStatus @default(SCHEDULED)
   refereeId   String?
   notes       String?
+  scheduleGroupId String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -302,6 +303,7 @@ model Game {
   @@index([status])
   @@index([homeTeamId])
   @@index([awayTeamId])
+  @@index([scheduleGroupId])
 }
 
 model Registration {

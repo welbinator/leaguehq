@@ -9,10 +9,28 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const leagueId = req.nextUrl.searchParams.get('leagueId');
+  const divisionId = req.nextUrl.searchParams.get('divisionId');
+  const seasonId = req.nextUrl.searchParams.get('seasonId');
   if (!leagueId) return NextResponse.json({ error: 'leagueId required' }, { status: 400 });
 
+  // If divisionId+seasonId provided, filter via SeasonEnrollment
+  let teamIdFilter: string[] | undefined;
+  if (divisionId && seasonId) {
+    const enrollments = await prisma.seasonEnrollment.findMany({
+      where: {
+        seasonId,
+        seasonDivision: { divisionId },
+      },
+      select: { teamId: true },
+    });
+    teamIdFilter = enrollments.map(e => e.teamId);
+  }
+
   const teams = await prisma.team.findMany({
-    where: { leagueId },
+    where: {
+      leagueId,
+      ...(teamIdFilter !== undefined ? { id: { in: teamIdFilter } } : {}),
+    },
     include: {
       seasonEnrollments: {
         include: {
