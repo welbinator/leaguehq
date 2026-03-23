@@ -129,6 +129,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Set captainId on the team if we have a userId
+    if (userId && team.captainId !== userId) {
+      await prisma.team.update({
+        where: { id: team.id },
+        data: { captainId: userId, seasonId },
+      });
+    }
+
+    // Ensure captain is a TeamMember
+    if (userId) {
+      await prisma.teamMember.upsert({
+        where: { teamId_userId: { teamId: team.id, userId } },
+        create: { teamId: team.id, userId, role: 'CAPTAIN', status: 'ACTIVE' },
+        update: { role: 'CAPTAIN', status: 'ACTIVE' },
+      });
+    }
+
     let enrollment = await prisma.seasonEnrollment.findUnique({
       where: { teamId_seasonId: { teamId: team.id, seasonId } },
     });
@@ -198,6 +215,15 @@ export async function POST(req: NextRequest) {
       notes: notes || null,
     },
   });
+
+  // Create TeamMember record so player appears on team roster
+  if (userId && teamId) {
+    await prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId, userId } },
+      create: { teamId, userId, role: 'PLAYER', status: 'ACTIVE' },
+      update: { status: 'ACTIVE' },
+    });
+  }
 
   await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
