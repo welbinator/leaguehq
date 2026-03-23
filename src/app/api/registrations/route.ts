@@ -161,21 +161,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const captainReg = await prisma.playerRegistration.create({
-      data: {
-        seasonId,
-        seasonDivisionId: seasonDivisionId || null,
-        teamId: team.id,
-        seasonEnrollmentId: enrollment.id,
-        isCaptain: true,
-        paymentStatus: paymentRequired ? 'awaiting_payment' : null,
-        userId: userId || null,
-        playerName,
-        playerEmail,
-        playerPhone: playerPhone || null,
-        notes: notes || null,
-      },
-    });
+    // Prevent duplicate registrations for the same user+season
+    let captainReg = userId
+      ? await prisma.playerRegistration.findFirst({ where: { userId, seasonId } })
+      : null;
+
+    if (!captainReg) {
+      captainReg = await prisma.playerRegistration.create({
+        data: {
+          seasonId,
+          seasonDivisionId: seasonDivisionId || null,
+          teamId: team.id,
+          seasonEnrollmentId: enrollment.id,
+          isCaptain: true,
+          paymentStatus: paymentRequired ? 'awaiting_payment' : null,
+          userId: userId || null,
+          playerName,
+          playerEmail,
+          playerPhone: playerPhone || null,
+          notes: notes || null,
+        },
+      });
+    }
 
     await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
@@ -200,21 +207,28 @@ export async function POST(req: NextRequest) {
     teamId = null;
   }
 
-  const playerReg = await prisma.playerRegistration.create({
-    data: {
-      seasonId,
-      seasonDivisionId: seasonDivisionId || null,
-      teamId: teamId || null,
-      seasonEnrollmentId: enrollmentId || null,
-      teamRegistrationId: team ? null : existingTeamId,
-      isCaptain: false,
-      userId: userId || null,
-      playerName,
-      playerEmail,
-      playerPhone: playerPhone || null,
-      notes: notes || null,
-    },
-  });
+  // Prevent duplicate registrations for the same user+season
+  let playerReg = userId
+    ? await prisma.playerRegistration.findFirst({ where: { userId, seasonId } })
+    : null;
+
+  if (!playerReg) {
+    playerReg = await prisma.playerRegistration.create({
+      data: {
+        seasonId,
+        seasonDivisionId: seasonDivisionId || null,
+        teamId: teamId || null,
+        seasonEnrollmentId: enrollmentId || null,
+        teamRegistrationId: team ? null : existingTeamId,
+        isCaptain: false,
+        userId: userId || null,
+        playerName,
+        playerEmail,
+        playerPhone: playerPhone || null,
+        notes: notes || null,
+      },
+    });
+  }
 
   // Create TeamMember record so player appears on team roster
   if (userId && teamId) {
