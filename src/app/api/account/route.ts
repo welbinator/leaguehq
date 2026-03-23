@@ -42,14 +42,25 @@ export async function GET() {
         },
       },
       registrations: {
-        take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           status: true,
           createdAt: true,
+          teamId: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              captainId: true,
+              division: { select: { name: true } },
+              season: { select: { id: true, name: true } },
+              league: { select: { name: true, slug: true, sport: true } },
+            },
+          },
           season: {
             select: {
+              id: true,
               name: true,
               league: { select: { name: true, slug: true } },
             },
@@ -60,8 +71,34 @@ export async function GET() {
         select: {
           id: true,
           name: true,
-          season: { select: { name: true } },
-          league: { select: { name: true, slug: true } },
+          captainId: true,
+          division: { select: { name: true } },
+          season: { select: { id: true, name: true } },
+          league: { select: { name: true, slug: true, sport: true } },
+          members: {
+            select: {
+              id: true,
+              role: true,
+              user: { select: { id: true, name: true, firstName: true, lastName: true } },
+            },
+          },
+        },
+      },
+      teamMemberships: {
+        where: { status: 'ACTIVE' },
+        select: {
+          id: true,
+          role: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              captainId: true,
+              division: { select: { name: true } },
+              season: { select: { id: true, name: true } },
+              league: { select: { name: true, slug: true, sport: true } },
+            },
+          },
         },
       },
     },

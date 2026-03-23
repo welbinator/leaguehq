@@ -91,6 +91,7 @@ export default function PlayerDashboard() {
 
   const [activeRoom, setActiveRoom] = useState(DUMMY_ROOMS[0]);
   const [chatInput, setChatInput] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast(msg); setToastType(type);
@@ -319,52 +320,34 @@ export default function PlayerDashboard() {
           )}
 
           {/* ── MY TEAM TAB ─────────────────────────────────────── */}
-          {activeTab === 'team' && (
-            <div className="space-y-5">
-              {user?.captainedTeams?.length > 0 && user.captainedTeams.map((team: any) => (
-                <Card key={team.id}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-2xl">🏅</span>
-                        <h2 className="text-xl font-black text-white">{team.name}</h2>
-                        <Badge variant="warning">Captain</Badge>
-                      </div>
-                      <p className="text-gray-400 text-sm mt-1">
-                        {team.league?.name}{team.season ? ` · ${team.season.name}` : ''}
-                      </p>
-                    </div>
-                    {team.league?.slug && (
-                      <a href={`/leagues/${team.league.slug}`} className="text-xs text-accent hover:underline font-medium flex-shrink-0">League page →</a>
-                    )}
-                  </div>
-                  <div className="bg-navy border border-white/[0.06] rounded-xl p-4 text-sm text-gray-400 text-center">
-                    Roster management coming soon.
-                  </div>
-                </Card>
-              ))}
+          {activeTab === 'team' && (() => {
+            // Consolidate all teams from captainedTeams, registrations, and teamMemberships
+            const seen = new Set<string>();
+            const allTeams: any[] = [];
 
-              {user?.registrations?.length > 0 && (
-                <Card>
-                  <h2 className="text-lg font-bold text-white mb-1">Season Registrations</h2>
-                  <p className="text-gray-400 text-sm mb-5">Leagues you're registered in</p>
-                  <div className="divide-y divide-white/[0.06]">
-                    {user.registrations.map((reg: any) => (
-                      <div key={reg.id} className="flex items-center justify-between py-3">
-                        <div>
-                          <p className="text-white font-medium text-sm">{reg.season?.league?.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{reg.season?.name}</p>
-                        </div>
-                        <Badge variant={reg.status === 'ACTIVE' ? 'success' : reg.status === 'PENDING' ? 'warning' : 'default'}>
-                          {reg.status.charAt(0) + reg.status.slice(1).toLowerCase()}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
+            // Captained teams first
+            (user?.captainedTeams || []).forEach((t: any) => {
+              if (!seen.has(t.id)) { seen.add(t.id); allTeams.push({ ...t, isCaptain: true }); }
+            });
+            // Teams from registrations
+            (user?.registrations || []).forEach((r: any) => {
+              if (r.team && !seen.has(r.team.id)) {
+                seen.add(r.team.id);
+                allTeams.push({ ...r.team, isCaptain: r.team.captainId === user?.id, regStatus: r.status });
+              }
+            });
+            // Teams from TeamMember records
+            (user?.teamMemberships || []).forEach((m: any) => {
+              if (m.team && !seen.has(m.team.id)) {
+                seen.add(m.team.id);
+                allTeams.push({ ...m.team, isCaptain: m.team.captainId === user?.id, memberRole: m.role });
+              }
+            });
 
-              {!user?.captainedTeams?.length && !user?.registrations?.length && (
+            const activeTeam = allTeams.find(t => t.id === selectedTeamId) ?? allTeams[0] ?? null;
+
+            if (allTeams.length === 0) {
+              return (
                 <Card>
                   <div className="text-center py-10">
                     <div className="text-5xl mb-3">🏅</div>
@@ -372,9 +355,112 @@ export default function PlayerDashboard() {
                     <p className="text-gray-400 text-sm">Register for a season to join or create a team.</p>
                   </div>
                 </Card>
-              )}
-            </div>
-          )}
+              );
+            }
+
+            return (
+              <div className="space-y-5">
+                {/* Team selector — only show if on multiple teams */}
+                {allTeams.length > 1 && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide">Select Team</label>
+                    <div className="flex flex-wrap gap-2">
+                      {allTeams.map((t: any) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setSelectedTeamId(t.id)}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-150 ${
+                            (selectedTeamId ?? allTeams[0]?.id) === t.id
+                              ? 'bg-accent text-navy border-accent'
+                              : 'bg-surface border-white/[0.06] text-gray-300 hover:border-white/20'
+                          }`}
+                        >
+                          {t.name}
+                          {t.isCaptain && <span className="ml-1.5 text-xs">⭐</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTeam && (
+                  <Card>
+                    <div className="flex items-start justify-between mb-5">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-2xl">🏅</span>
+                          <h2 className="text-xl font-black text-white">{activeTeam.name}</h2>
+                          {activeTeam.isCaptain && <Badge variant="warning">⭐ Captain</Badge>}
+                          {activeTeam.memberRole === 'COACH' && <Badge variant="default">Coach</Badge>}
+                        </div>
+                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-400">
+                          {activeTeam.league?.name && <span>🏆 {activeTeam.league.name}</span>}
+                          {activeTeam.season?.name && <span>📅 {activeTeam.season.name}</span>}
+                          {activeTeam.division?.name && <span>📂 {activeTeam.division.name}</span>}
+                        </div>
+                      </div>
+                      {activeTeam.league?.slug && (
+                        <a href={`/leagues/${activeTeam.league.slug}`} className="text-xs text-accent hover:underline font-medium flex-shrink-0">League page →</a>
+                      )}
+                    </div>
+
+                    {/* Roster — shown if we have member data (captained teams include it) */}
+                    {activeTeam.members?.length > 0 ? (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Roster</h3>
+                        <div className="divide-y divide-white/[0.06]">
+                          {activeTeam.members.map((m: any) => {
+                            const memberName = m.user?.firstName
+                              ? `${m.user.firstName}${m.user.lastName ? ' ' + m.user.lastName : ''}`
+                              : m.user?.name || 'Unknown';
+                            const initials = memberName.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase();
+                            return (
+                              <div key={m.id} className="flex items-center gap-3 py-2.5">
+                                <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/20 flex items-center justify-center text-accent text-xs font-bold flex-shrink-0">
+                                  {initials}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-sm font-medium">
+                                    {memberName}
+                                    {m.user?.id === user?.id && <span className="text-gray-500 text-xs ml-1">(you)</span>}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-gray-500 capitalize">{m.role?.toLowerCase()}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-navy border border-white/[0.06] rounded-xl p-4 text-sm text-gray-500 text-center">
+                        Full roster visible to team captains.
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                {/* Registration statuses */}
+                {user?.registrations?.some((r: any) => r.team) && (
+                  <Card>
+                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Registration Status</h3>
+                    <div className="divide-y divide-white/[0.06]">
+                      {user.registrations.filter((r: any) => r.team).map((reg: any) => (
+                        <div key={reg.id} className="flex items-center justify-between py-3">
+                          <div>
+                            <p className="text-white text-sm font-medium">{reg.team?.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{reg.season?.league?.name} · {reg.season?.name}</p>
+                          </div>
+                          <Badge variant={reg.status === 'ACTIVE' ? 'success' : reg.status === 'PENDING' ? 'warning' : 'default'}>
+                            {reg.status.charAt(0) + reg.status.slice(1).toLowerCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ── SCHEDULE TAB ────────────────────────────────────── */}
           {activeTab === 'schedule' && (
