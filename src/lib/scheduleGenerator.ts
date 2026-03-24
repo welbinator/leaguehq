@@ -40,21 +40,34 @@ function nextGameDate(from: Date, gameDays: number[]): Date {
   return d;
 }
 
+/**
+ * Parse a time string in HH:MM (24h) format from <input type="time">.
+ * Falls back gracefully for legacy 12h strings just in case.
+ */
 function parseTime(timeStr: string): { hours: number; minutes: number } {
-  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-  if (!match) return { hours: 18, minutes: 0 };
-  let hours = parseInt(match[1]);
-  const minutes = parseInt(match[2]);
-  const meridiem = match[3]?.toUpperCase();
-  if (meridiem === 'PM' && hours !== 12) hours += 12;
-  if (meridiem === 'AM' && hours === 12) hours = 0;
-  return { hours, minutes };
+  // Primary: HH:MM 24h from input[type=time]
+  const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) return { hours: parseInt(match24[1]), minutes: parseInt(match24[2]) };
+
+  // Fallback: 12h with AM/PM (e.g. "9:00 AM", "9am")
+  const match12 = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+  if (match12) {
+    let hours = parseInt(match12[1]);
+    const minutes = match12[2] ? parseInt(match12[2]) : 0;
+    const meridiem = match12[3].toUpperCase();
+    if (meridiem === 'PM' && hours !== 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+    return { hours, minutes };
+  }
+
+  return { hours: 18, minutes: 0 }; // default 6 PM
 }
 
 function withTime(date: Date, timeStr: string): Date {
   const { hours, minutes } = parseTime(timeStr);
+  // Use UTC methods to avoid timezone drift when date came from an ISO date string
   const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
+  d.setUTCHours(hours, minutes, 0, 0);
   return d;
 }
 

@@ -18,6 +18,18 @@ const statusVariant: Record<GameStatus, 'default' | 'success' | 'warning' | 'dan
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+/** Convert HH:MM (24h) to "6:00 PM" display format */
+function formatTime24(t: string): string {
+  const match = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return t;
+  let h = parseInt(match[1]);
+  const m = match[2];
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${suffix}`;
+}
+
 interface SchedulePageProps {
   params: { slug: string };
 }
@@ -86,7 +98,7 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [gameDays, setGameDays] = useState<number[]>([6]); // Sat default
-  const [timeSlots, setTimeSlots] = useState<string[]>(['6:00 PM']);
+  const [timeSlots, setTimeSlots] = useState<string[]>(['18:00']);
   const [newTimeSlot, setNewTimeSlot] = useState('');
   const [location, setLocation] = useState('');
 
@@ -110,6 +122,9 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
         const divs = (j.data?.seasonDivisions ?? []).map((sd: any) => sd.division);
         setDivisions(divs);
         setSelectedDivision('');
+        // Default start/end dates to the season's dates
+        if (j.data?.startDate) setStartDate(j.data.startDate.split('T')[0]);
+        if (j.data?.endDate) setEndDate(j.data.endDate.split('T')[0]);
       });
   }, [selectedSeason]);
 
@@ -336,7 +351,7 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
           <div className="flex flex-wrap gap-2 mb-3">
             {timeSlots.map(t => (
               <span key={t} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white">
-                {t}
+                {formatTime24(t)}
                 <button
                   onClick={() => removeTimeSlot(t)}
                   className="text-gray-500 hover:text-red-400 transition-colors"
@@ -344,14 +359,12 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
               </span>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <input
-              type="text"
+              type="time"
               value={newTimeSlot}
               onChange={e => setNewTimeSlot(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addTimeSlot()}
-              placeholder="e.g. 8:00 PM"
-              className="bg-navy border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent/50 w-36"
+              className="bg-navy border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent/50"
             />
             <Button variant="secondary" size="sm" onClick={addTimeSlot}>+ Add</Button>
           </div>
