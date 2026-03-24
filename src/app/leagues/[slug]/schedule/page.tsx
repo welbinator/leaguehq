@@ -637,24 +637,27 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   const { slug } = params;
   const sessionResult = useSession();
   const session = sessionResult?.data ?? null;
-  const sessionStatus = sessionResult?.status ?? 'loading';
   const [league, setLeague] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/leagues/${slug}`)
-      .then(r => r.json())
-      .then(j => {
-        if (j.error) throw new Error(j.error);
-        setLeague(j.data);
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+    // Fetch both league and current user in parallel
+    Promise.all([
+      fetch(`/api/leagues/${slug}`).then(r => r.json()),
+      fetch('/api/account').then(r => r.json()),
+    ]).then(([leagueJson, accountJson]) => {
+      if (leagueJson.error) throw new Error(leagueJson.error);
+      setLeague(leagueJson.data);
+      setCurrentUserId(accountJson?.data?.id ?? accountJson?.id ?? null);
+    })
+    .catch(e => setError(e.message))
+    .finally(() => setLoading(false));
   }, [slug]);
 
-  if (loading || sessionStatus === 'loading') return (
+  if (loading) return (
     <div className="flex items-center justify-center py-24">
       <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
     </div>
@@ -666,8 +669,11 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     </div>
   );
 
-  const userId = (session?.user as any)?.id;
-  const isDirector = league.ownerId === userId;
+  const userId = currentUserId ?? (session?.user as any)?.id ?? null;
+  // Compare ownerId — if session hasn't loaded yet, userId will be undefined
+  // In that case show player view (safe default); it won't affect logged-in directors
+  // since the league fetch itself requires auth
+  const isDirector = !!userId && league.ownerId === userId;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
