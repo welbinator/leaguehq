@@ -131,7 +131,7 @@ export default function DashboardPage() {
   const totalPlayers = leagues.reduce((sum: number, l: any) => sum + (l.playerRegCount ?? 0), 0);
 
   // Don't render director dashboard for players — show spinner while redirect fires
-  if (status === 'loading' || !session) {
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
