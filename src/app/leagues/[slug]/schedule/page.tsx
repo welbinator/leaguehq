@@ -637,6 +637,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   const { slug } = params;
   const sessionResult = useSession();
   const session = sessionResult?.data ?? null;
+  const sessionStatus = sessionResult?.status ?? 'loading';
   const [league, setLeague] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -653,7 +654,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  if (loading) return (
+  if (loading || sessionStatus === 'loading') return (
     <div className="flex items-center justify-center py-24">
       <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
     </div>
