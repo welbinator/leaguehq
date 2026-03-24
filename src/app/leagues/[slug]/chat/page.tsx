@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { LeagueNav } from '@/components/league/LeagueNav';
 import { ChatRoom } from '@/components/chat/ChatRoom';
 
@@ -13,12 +12,18 @@ interface Room {
 
 export default function LeagueChatPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
-  const { data: session } = useSession();
+  const [userId, setUserId] = useState<string | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const userId = (session?.user as any)?.id;
+  // Get userId from account API (avoids useSession destructure issues)
+  useEffect(() => {
+    fetch('/api/account')
+      .then(r => r.json())
+      .then(json => { if (json.data?.id) setUserId(json.data.id); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -45,7 +50,7 @@ export default function LeagueChatPage({ params }: { params: { slug: string } })
           <div className="text-center py-24">
             <div className="text-5xl mb-4">💬</div>
             <h2 className="text-xl font-bold text-white mb-2">No chats yet</h2>
-            <p className="text-gray-400 text-sm">Chat rooms will appear here once enabled by your league director.</p>
+            <p className="text-gray-400 text-sm">Chat rooms will appear here once you're added to a team or season.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ height: '600px' }}>
