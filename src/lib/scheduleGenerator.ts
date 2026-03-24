@@ -65,10 +65,11 @@ function parseTime(timeStr: string): { hours: number; minutes: number } {
 
 function withTime(date: Date, timeStr: string): Date {
   const { hours, minutes } = parseTime(timeStr);
-  // Use UTC methods to avoid timezone drift when date came from an ISO date string
+  // Use local time — the date comes from a YYYY-MM-DD string which is parsed as
+  // midnight UTC, so we reconstruct using local date components + desired time.
   const d = new Date(date);
-  d.setUTCHours(hours, minutes, 0, 0);
-  return d;
+  const localDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hours, minutes, 0, 0);
+  return localDate;
 }
 
 function makeSlotCursor(startDate: string, endDate: string, gameDays: number[], timeSlots: string[]) {
