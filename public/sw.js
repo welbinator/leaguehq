@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leaguehq-v1';
+const CACHE_NAME = 'leaguehq-v2';
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
@@ -26,19 +26,33 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
-  // Don't cache API calls
-  if (event.request.url.includes('/api/')) return;
+  // Never intercept API calls, Next.js RSC payloads, or auth endpoints
+  const url = event.request.url;
+  if (url.includes('/api/')) return;
+  if (url.includes('_next/')) return;
+  if (url.includes('_rsc')) return;
+  if (url.includes('__nextjs')) return;
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful responses
+        // Only cache successful HTML/asset responses
         if (response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        // Try cache fallback
+        return caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // Return a basic offline response rather than throwing
+          return new Response('Offline — please check your connection.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        });
+      })
   );
 });
