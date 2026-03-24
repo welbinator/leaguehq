@@ -101,7 +101,7 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
   const [endDate, setEndDate] = useState('');
   const [gameDays, setGameDays] = useState<number[]>([6]); // Sat default
   const [timeSlots, setTimeSlots] = useState<string[]>(['18:00']);
-  const [newTimeSlot, setNewTimeSlot] = useState('');
+  const [newTimeSlot, setNewTimeSlot] = useState('09:00');
   const [location, setLocation] = useState('');
 
   const [preview, setPreview] = useState<GamePreview[] | null>(null);
@@ -365,7 +365,16 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
             <input
               type="time"
               value={newTimeSlot}
-              onChange={e => setNewTimeSlot(e.target.value)}
+              step={900}
+              onChange={e => {
+                // Snap to nearest 15-min increment and zero out seconds
+                const val = e.target.value; // HH:MM or HH:MM:SS
+                const [h, m] = val.split(':').map(Number);
+                const snapped = Math.round(m / 15) * 15;
+                const mm = snapped === 60 ? 0 : snapped;
+                const hh = snapped === 60 ? (h + 1) % 24 : h;
+                setNewTimeSlot(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+              }}
               className="bg-navy border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent/50"
             />
             <Button variant="secondary" size="sm" onClick={addTimeSlot}>+ Add</Button>
