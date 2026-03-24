@@ -68,7 +68,8 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) { setLoading(false); return; }
+    if (!userId) return; // stay in loading state until userId is available
+    setLoading(true);
     fetch(`/api/games?userId=${userId}`)
       .then(r => r.json())
       .then(j => setGames(j.data ?? []))
@@ -543,7 +544,7 @@ export default function PlayerDashboard() {
 
           {/* ── SCHEDULE TAB ────────────────────────────────────── */}
           {activeTab === 'schedule' && (
-            <PlayerScheduleTab userId={(session?.user as any)?.id} />
+            <PlayerScheduleTab userId={user?.id ?? (session?.user as any)?.id} />
           )}
 
           {/* ── CHAT TAB ────────────────────────────────────────── */}
