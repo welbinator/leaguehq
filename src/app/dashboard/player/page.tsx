@@ -152,28 +152,29 @@ function PlayerChatTab({ userId }: { userId?: string }) {
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="space-y-1">
-        {rooms.map(room => (
-          <button
-            key={room.id}
-            onClick={() => setActiveRoom(room)}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
-              activeRoom?.id === room.id
-                ? 'bg-accent/10 border border-accent/30 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-            }`}
-          >
-            <div className="font-medium">{room.type === 'TEAM' ? '👥' : '🏆'} {room.name}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{room.type === 'TEAM' ? 'Team Chat' : 'Season Chat'}</div>
-          </button>
-        ))}
+    <div className="flex flex-col gap-3">
+      {/* Room selector dropdown */}
+      <div className="relative">
+        <select
+          value={activeRoom?.id ?? ''}
+          onChange={e => setActiveRoom(rooms.find(r => r.id === e.target.value) ?? null)}
+          className="w-full bg-surface border border-white/[0.08] text-white text-sm font-medium rounded-xl px-4 py-2.5 pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-accent/50 cursor-pointer"
+        >
+          {rooms.map(room => (
+            <option key={room.id} value={room.id}>
+              {room.type === 'TEAM' ? '👥' : '🏆'} {room.name} — {room.type === 'TEAM' ? 'Team Chat' : 'Season Chat'}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▼</span>
       </div>
-      <div className="md:col-span-2 bg-surface border border-white/[0.08] rounded-2xl overflow-hidden">
+
+      {/* Chat area */}
+      <div className="bg-surface border border-white/[0.08] rounded-2xl overflow-hidden" style={{ height: '480px' }}>
         {activeRoom && userId ? (
           <ChatRoom roomId={activeRoom.id} currentUserId={userId} roomName={activeRoom.name} />
         ) : (
-          <div className="flex items-center justify-center h-full py-16 text-gray-500 text-sm">Select a chat</div>
+          <div className="flex items-center justify-center h-full text-gray-500 text-sm">Select a chat</div>
         )}
       </div>
     </div>

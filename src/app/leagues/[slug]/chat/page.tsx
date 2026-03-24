@@ -51,28 +51,25 @@ export default function LeagueChatPage({ params }: { params: { slug: string } })
             <p className="text-gray-400 text-sm">Chat rooms will appear here once you're added to a team or season.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ height: '600px' }}>
-            {/* Room list */}
-            <div className="bg-surface border border-white/[0.06] rounded-2xl p-3 flex flex-col gap-2 overflow-y-auto">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest px-1 mb-1">Rooms</p>
-              {rooms.map(room => (
-                <button
-                  key={room.id}
-                  onClick={() => setActiveRoom(room)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
-                    activeRoom?.id === room.id
-                      ? 'bg-accent/10 border border-accent/30 text-white'
-                      : 'text-gray-400 hover:bg-white/[0.04] border border-transparent'
-                  }`}
-                >
-                  <span className="mr-2">{room.type === 'SEASON' ? '🏆' : '👥'}</span>
-                  {room.name}
-                </button>
-              ))}
+          <div className="flex flex-col gap-3">
+            {/* Room selector dropdown */}
+            <div className="relative">
+              <select
+                value={activeRoom?.id ?? ''}
+                onChange={e => setActiveRoom(rooms.find(r => r.id === e.target.value) ?? null)}
+                className="w-full bg-surface border border-white/[0.08] text-white text-sm font-medium rounded-xl px-4 py-2.5 pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-accent/50 cursor-pointer"
+              >
+                {rooms.map(room => (
+                  <option key={room.id} value={room.id}>
+                    {room.type === 'SEASON' ? '🏆' : '👥'} {room.name} — {room.type === 'SEASON' ? 'Season Chat' : 'Team Chat'}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▼</span>
             </div>
 
             {/* Chat area */}
-            <div className="md:col-span-2 h-full">
+            <div className="bg-surface border border-white/[0.08] rounded-2xl overflow-hidden" style={{ height: '560px' }}>
               {activeRoom && userId ? (
                 <ChatRoom
                   roomId={activeRoom.id}
