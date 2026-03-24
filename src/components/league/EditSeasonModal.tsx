@@ -21,7 +21,8 @@ interface Season {
   name: string;
   startDate: string;
   endDate: string;
-  registrationOpen: boolean;
+  registrationOpen: boolean;,
+        chatEnabled
   paymentRequired: boolean;
   paymentDueDate: string | null;
   status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
@@ -41,6 +42,7 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
   const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState<'UPCOMING' | 'ACTIVE' | 'COMPLETED'>('UPCOMING');
   const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(false);
   const [paymentRequired, setPaymentRequired] = useState(true);
   const [paymentDueDate, setPaymentDueDate] = useState('');
   const [divisions, setDivisions] = useState<{ divisionId: string; name: string; price: string; pricingType: 'PER_PLAYER' | 'PER_TEAM' }[]>([]);
@@ -54,6 +56,7 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
       setEndDate(season.endDate ? season.endDate.split('T')[0] : '');
       setStatus(season.status);
       setRegistrationOpen(season.registrationOpen);
+    setChatEnabled(season?.chatEnabled ?? false);
       setPaymentRequired(season.paymentRequired);
       setPaymentDueDate(season.paymentDueDate ? season.paymentDueDate.split('T')[0] : '');
       setDivisions(
@@ -108,7 +111,22 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
   const footer = (
     <>
       <Button variant="ghost" onClick={onClose}>Cancel</Button>
-      <Button onClick={handleSave} loading={saving}>Save Changes</Button>
+      
+          {/* Season Chat */}
+          <div className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/[0.08] mt-4">
+            <div>
+              <p className="text-sm font-medium text-white">Season Chat</p>
+              <p className="text-xs text-gray-500 mt-0.5">All registered players can chat together</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChatEnabled(v => !v)}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${chatEnabled ? 'bg-accent' : 'bg-white/10'}`}
+            >
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${chatEnabled ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+          <Button onClick={handleSave} loading={saving}>Save Changes</Button>
     </>
   );
 

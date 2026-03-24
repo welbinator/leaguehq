@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma migrate deploy && next start",
+    "start": "prisma migrate deploy && node server.js",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -15,13 +15,15 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.1",
     "@prisma/client": "^5.14.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "bcryptjs": "^2.4.3",
     "next": "^14.2.35",
     "next-auth": "^4.24.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "socket.io": "^4.7.5",
-    "socket.io-client": "^4.7.5",
+    "redis": "^5.11.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "stripe": "^15.9.0",
     "zod": "^3.23.8"
   },

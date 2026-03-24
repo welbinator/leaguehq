@@ -59,5 +59,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
   });
 
-  return NextResponse.json({ data: season });
+  
+    // Auto-create season chat room when chatEnabled is first turned on
+    if (body.chatEnabled === true && existingSeason && !existingSeason.chatEnabled) {
+      let room = await prisma.chatRoom.findFirst({ where: { seasonId: id, type: 'SEASON' } });
+      if (!room) {
+        const season = await prisma.season.findUnique({ where: { id }, select: { name: true, leagueId: true } });
+        if (season) {
+          room = await prisma.chatRoom.create({
+            data: { leagueId: season.leagueId, name: season.name, type: 'SEASON', seasonId: id },
+          });
+        }
+      }
+      if (room) {
+        const regs = await prisma.playerRegistration.findMany({
+          where: { seasonId: id, userId: { not: null } },
+          select: { userId: true },
+        });
+        for (const r of regs) {
+          if (!r.userId) continue;
+          await prisma.chatMember.upsert({
+            where: { roomId_userId: { roomId: room.id, userId: r.userId } },
+            update: {},
+            create: { roomId: room.id, userId: r.userId },
+          });
+        }
+      }
+    }
+return NextResponse.json({ data: season });
 }

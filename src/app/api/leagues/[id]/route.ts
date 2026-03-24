@@ -89,5 +89,51 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
   });
 
-  return NextResponse.json({ data: league });
+
+    // Auto-create team chat rooms when teamChatsEnabled is first turned on
+    if (body.teamChatsEnabled === true && existingLeague && !existingLeague.teamChatsEnabled) {
+      const teams = await prisma.team.findMany({
+        where: { leagueId: id },
+        include: { members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
+      });
+      for (const team of teams) {
+        let room = await prisma.chatRoom.findFirst({ where: { teamId: team.id, type: 'TEAM' } });
+        if (!room) {
+          room = await prisma.chatRoom.create({
+            data: { leagueId: id, name: team.name, type: 'TEAM', teamId: team.id },
+          });
+        }
+        for (const m of team.members) {
+          await prisma.chatMember.upsert({
+            where: { roomId_userId: { roomId: room.id, userId: m.userId } },
+            update: {},
+            create: { roomId: room.id, userId: m.userId },
+          });
+        }
+      }
+    }
+    
+    // Auto-create team chat rooms when teamChatsEnabled is first turned on
+    if (body.teamChatsEnabled === true && existingLeague && !existingLeague.teamChatsEnabled) {
+      const teams = await prisma.team.findMany({
+        where: { leagueId: id },
+        include: { members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
+      });
+      for (const team of teams) {
+        let room = await prisma.chatRoom.findFirst({ where: { teamId: team.id, type: 'TEAM' } });
+        if (!room) {
+          room = await prisma.chatRoom.create({
+            data: { leagueId: id, name: team.name, type: 'TEAM', teamId: team.id },
+          });
+        }
+        for (const m of team.members) {
+          await prisma.chatMember.upsert({
+            where: { roomId_userId: { roomId: room.id, userId: m.userId } },
+            update: {},
+            create: { roomId: room.id, userId: m.userId },
+          });
+        }
+      }
+    }
+return NextResponse.json({ data: league });
 }

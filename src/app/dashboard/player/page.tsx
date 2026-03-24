@@ -1,5 +1,7 @@
 'use client';
 
+import { ChatRoom } from '@/components/chat/ChatRoom';
+
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
@@ -144,6 +146,68 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
           </div>
         </Card>
       )}
+    </div>
+  );
+}
+
+
+function PlayerChatTab({ userId }: { userId?: string }) {
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [activeRoom, setActiveRoom] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    fetch('/api/chat/rooms')
+      .then(r => r.json())
+      .then(j => {
+        const r = j.data ?? [];
+        setRooms(r);
+        if (r.length > 0) setActiveRoom(r[0]);
+      })
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!rooms.length) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="text-4xl mb-3">💬</div>
+      <h3 className="text-lg font-bold text-white mb-1">No chats yet</h3>
+      <p className="text-gray-400 text-sm">Your league director hasn't enabled chat yet.</p>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="space-y-1">
+        {rooms.map(room => (
+          <button
+            key={room.id}
+            onClick={() => setActiveRoom(room)}
+            className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+              activeRoom?.id === room.id
+                ? 'bg-accent/10 border border-accent/30 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
+            }`}
+          >
+            <div className="font-medium">{room.type === 'TEAM' ? '👥' : '🏆'} {room.name}</div>
+            <div className="text-xs text-gray-500 mt-0.5">{room.type === 'TEAM' ? 'Team Chat' : 'Season Chat'}</div>
+          </button>
+        ))}
+      </div>
+      <div className="md:col-span-2 bg-surface border border-white/[0.08] rounded-2xl overflow-hidden">
+        {activeRoom && userId ? (
+          <ChatRoom roomId={activeRoom.id} currentUserId={userId} roomName={activeRoom.name} />
+        ) : (
+          <div className="flex items-center justify-center h-full py-16 text-gray-500 text-sm">Select a chat</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -549,18 +613,8 @@ export default function PlayerDashboard() {
 
           {/* ── CHAT TAB ────────────────────────────────────────── */}
           {activeTab === 'chat' && (
-            <div className="space-y-5">
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-yellow-300 text-sm flex items-center gap-2">
-                <span>🚧</span>
-                <span>Chat is coming soon. Below is a preview of what it'll look like.</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-1 space-y-2">
-                  {DUMMY_ROOMS.map(room => (
-                    <button
-                      key={room.id}
-                      onClick={() => setActiveRoom(room)}
+            <PlayerChatTab userId={user?.id ?? (session?.user as any)?.id} />
+          )}
                       className={`w-full text-left p-3 rounded-xl border transition-all duration-150 ${
                         activeRoom.id === room.id
                           ? 'bg-accent/10 border-accent/30'

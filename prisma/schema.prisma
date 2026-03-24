@@ -77,6 +77,7 @@ enum PricingType {
 enum ChatRoomType {
   TEAM
   LEAGUE
+  SEASON
   CUSTOM
 }
 
@@ -135,6 +136,7 @@ model League {
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
   stripeCustomerId        String?
   stripeConnectAccountId  String?  // Connected Stripe account for collecting payments
+  teamChatsEnabled   Boolean            @default(false)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -196,6 +198,7 @@ model Season {
   teamRegistrations TeamRegistration[]
   playerRegistrations PlayerRegistration[]
   seasonEnrollments SeasonEnrollment[]
+  chatRooms          ChatRoom[]
 
   @@index([leagueId])
   @@index([leagueId, status])
@@ -340,6 +343,7 @@ model ChatRoom {
   name        String
   type        ChatRoomType @default(CUSTOM)
   teamId      String?
+  seasonId    String?
   autoAddRule Json?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -347,11 +351,13 @@ model ChatRoom {
   // Relations
   league   League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   team     Team?         @relation(fields: [teamId], references: [id])
+  season   Season?       @relation(fields: [seasonId], references: [id])
   messages ChatMessage[]
   members  ChatMember[]
 
   @@index([leagueId])
   @@index([teamId])
+  @@index([seasonId])
 }
 
 model ChatMessage {

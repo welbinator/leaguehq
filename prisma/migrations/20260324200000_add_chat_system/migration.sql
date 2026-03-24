@@ -1,0 +1,9 @@
+ALTER TABLE "League" ADD COLUMN IF NOT EXISTS "teamChatsEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Season" ADD COLUMN IF NOT EXISTS "chatEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "ChatRoom" ADD COLUMN IF NOT EXISTS "seasonId" TEXT;
+DO $$ BEGIN
+  ALTER TABLE "ChatRoom" ADD CONSTRAINT "ChatRoom_seasonId_fkey"
+    FOREIGN KEY ("seasonId") REFERENCES "Season"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS "ChatRoom_seasonId_idx" ON "ChatRoom"("seasonId");
