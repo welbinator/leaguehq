@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LeagueNav } from '@/components/league/LeagueNav';
 import { ChatRoom } from '@/components/chat/ChatRoom';
 
 interface Room {
@@ -40,7 +39,6 @@ export default function LeagueChatPage({ params }: { params: { slug: string } })
 
   return (
     <>
-      <LeagueNav slug={slug} />
       <div className="max-w-5xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-24">
