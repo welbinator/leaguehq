@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/Badge';
 type Tab = 'profile' | 'team' | 'schedule' | 'chat';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'profile',  label: 'Profile',  icon: '👤' },
   { id: 'team',     label: 'My Team',  icon: '🏅' },
   { id: 'schedule', label: 'Schedule', icon: '📅' },
   { id: 'chat',     label: 'Chat',     icon: '💬' },
@@ -186,7 +185,7 @@ export default function PlayerDashboard() {
   const session = sessionResult?.data;
   const status = sessionResult?.status;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [activeTab, setActiveTab] = useState<Tab>('team');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
