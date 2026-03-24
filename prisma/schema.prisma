@@ -185,6 +185,7 @@ model Season {
   registrationOpen  Boolean      @default(false)
   paymentRequired   Boolean      @default(true)
   paymentDueDate    DateTime?
+  chatEnabled       Boolean      @default(false)
   status            SeasonStatus @default(UPCOMING)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
