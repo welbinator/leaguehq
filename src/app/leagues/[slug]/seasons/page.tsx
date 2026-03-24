@@ -73,6 +73,12 @@ function classifySeasons(seasons: Season[]) {
     }
   }
 
+  // If nothing is active right now, promote the next upcoming season to Current
+  if (current.length === 0 && upcoming.length > 0) {
+    upcoming.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    current.push(upcoming.shift()!);
+  }
+
   return { current, upcoming, past };
 }
 
