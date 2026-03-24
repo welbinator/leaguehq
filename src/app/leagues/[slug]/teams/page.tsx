@@ -35,6 +35,7 @@ const labelCls = 'block text-sm font-medium text-gray-300 mb-1.5';
 export default function TeamsPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const [leagueId, setLeagueId] = useState('');
+  const [isDirector, setIsDirector] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,11 +61,16 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
   async function loadData() {
-    const leagueRes = await fetch(`/api/leagues/${slug}`);
-    const leagueJson = await leagueRes.json();
+    const [leagueRes, accountRes] = await Promise.all([
+      fetch(`/api/leagues/${slug}`),
+      fetch('/api/account'),
+    ]);
+    const [leagueJson, accountJson] = await Promise.all([leagueRes.json(), accountRes.json()]);
     if (!leagueJson.data) return;
     const lid = leagueJson.data.id;
     setLeagueId(lid);
+    const currentUserId = accountJson?.data?.id ?? null;
+    setIsDirector(!!currentUserId && leagueJson.data.ownerId === currentUserId);
 
     const [teamsRes, seasonsRes] = await Promise.all([
       fetch(`/api/teams?leagueId=${lid}`),
@@ -169,7 +175,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
             <h1 className="text-2xl font-black text-white">Teams</h1>
             <p className="text-gray-400 text-sm mt-0.5">{teams.length} team{teams.length !== 1 ? 's' : ''} in this league</p>
           </div>
-          <Button onClick={() => { setNewTeamName(''); setCreateError(''); setCreateOpen(true); }}>+ Add Team</Button>
+          {isDirector && <Button onClick={() => { setNewTeamName(''); setCreateError(''); setCreateOpen(true); }}>+ Add Team</Button>}
         </div>
 
         {loading ? (
@@ -211,12 +217,14 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {isDirector && (
                       <button
                         onClick={() => openEnroll(team)}
                         className="text-xs text-gray-400 hover:text-accent border border-white/10 hover:border-accent/30 px-3 py-1.5 rounded-lg transition-all"
                       >
                         Enroll in Season
                       </button>
+                      )}
                       {team.seasonEnrollments.length > 0 && (
                         <button
                           onClick={() => setExpandedTeam(isExpanded ? null : team.id)}
@@ -242,6 +250,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                               <span className="text-xs text-gray-400">{e.seasonDivision.division.name}</span>
                             )}
                           </div>
+                          {isDirector && (
                           <div className="flex gap-2">
                             {e.status === 'PENDING' && (
                               <>
@@ -272,6 +281,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                               >Re-approve</button>
                             )}
                           </div>
+                          )}
                         </div>
                       ))}
                     </div>
