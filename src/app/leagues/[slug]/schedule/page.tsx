@@ -362,21 +362,21 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
             ))}
           </div>
           <div className="flex gap-2 items-center">
-            <input
-              type="time"
+            <select
               value={newTimeSlot}
-              step={900}
-              onChange={e => {
-                // Snap to nearest 15-min increment and zero out seconds
-                const val = e.target.value; // HH:MM or HH:MM:SS
-                const [h, m] = val.split(':').map(Number);
-                const snapped = Math.round(m / 15) * 15;
-                const mm = snapped === 60 ? 0 : snapped;
-                const hh = snapped === 60 ? (h + 1) % 24 : h;
-                setNewTimeSlot(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
-              }}
+              onChange={e => setNewTimeSlot(e.target.value)}
               className="bg-navy border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent/50"
-            />
+            >
+              {Array.from({ length: 24 }, (_, h) =>
+                [0, 15, 30, 45].map(m => {
+                  const hh = String(h).padStart(2, '0');
+                  const mm = String(m).padStart(2, '0');
+                  const val = `${hh}:${mm}`;
+                  const label = formatTime24(val);
+                  return <option key={val} value={val}>{label}</option>;
+                })
+              )}
+            </select>
             <Button variant="secondary" size="sm" onClick={addTimeSlot}>+ Add</Button>
           </div>
         </div>
