@@ -77,63 +77,55 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { name, sport, description, settings } = await req.json();
+  const id = params.id;
+  const body = await req.json();
+  const { name, sport, description, settings, teamChatsEnabled } = body;
+
+  // Fetch existing league to check current teamChatsEnabled value
+  const existingLeague = await prisma.league.findUnique({
+    where: { id },
+    select: { teamChatsEnabled: true, ownerId: true },
+  });
+  if (!existingLeague) return NextResponse.json({ error: 'League not found' }, { status: 404 });
+
+  // Only the owner can update
+  if (existingLeague.ownerId !== (session.user as any).id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const league = await prisma.league.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(name && { name }),
       ...(sport && { sport }),
       ...(description !== undefined && { description }),
       ...(settings && { settings }),
+      ...(teamChatsEnabled !== undefined && { teamChatsEnabled }),
     },
   });
 
+  // Auto-create team chat rooms when teamChatsEnabled is first turned on
+  if (teamChatsEnabled === true && !existingLeague.teamChatsEnabled) {
+    const teams = await prisma.team.findMany({
+      where: { leagueId: id },
+      include: { members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
+    });
+    for (const team of teams) {
+      let room = await prisma.chatRoom.findFirst({ where: { teamId: team.id, type: 'TEAM' } });
+      if (!room) {
+        room = await prisma.chatRoom.create({
+          data: { leagueId: id, name: team.name, type: 'TEAM', teamId: team.id },
+        });
+      }
+      for (const m of team.members) {
+        await prisma.chatMember.upsert({
+          where: { roomId_userId: { roomId: room.id, userId: m.userId } },
+          update: {},
+          create: { roomId: room.id, userId: m.userId },
+        });
+      }
+    }
+  }
 
-    // Auto-create team chat rooms when teamChatsEnabled is first turned on
-    if (body.teamChatsEnabled === true && existingLeague && !existingLeague.teamChatsEnabled) {
-      const teams = await prisma.team.findMany({
-        where: { leagueId: id },
-        include: { members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
-      });
-      for (const team of teams) {
-        let room = await prisma.chatRoom.findFirst({ where: { teamId: team.id, type: 'TEAM' } });
-        if (!room) {
-          room = await prisma.chatRoom.create({
-            data: { leagueId: id, name: team.name, type: 'TEAM', teamId: team.id },
-          });
-        }
-        for (const m of team.members) {
-          await prisma.chatMember.upsert({
-            where: { roomId_userId: { roomId: room.id, userId: m.userId } },
-            update: {},
-            create: { roomId: room.id, userId: m.userId },
-          });
-        }
-      }
-    }
-    
-    // Auto-create team chat rooms when teamChatsEnabled is first turned on
-    if (body.teamChatsEnabled === true && existingLeague && !existingLeague.teamChatsEnabled) {
-      const teams = await prisma.team.findMany({
-        where: { leagueId: id },
-        include: { members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
-      });
-      for (const team of teams) {
-        let room = await prisma.chatRoom.findFirst({ where: { teamId: team.id, type: 'TEAM' } });
-        if (!room) {
-          room = await prisma.chatRoom.create({
-            data: { leagueId: id, name: team.name, type: 'TEAM', teamId: team.id },
-          });
-        }
-        for (const m of team.members) {
-          await prisma.chatMember.upsert({
-            where: { roomId_userId: { roomId: room.id, userId: m.userId } },
-            update: {},
-            create: { roomId: room.id, userId: m.userId },
-          });
-        }
-      }
-    }
-return NextResponse.json({ data: league });
+  return NextResponse.json({ data: league });
 }
