@@ -21,8 +21,8 @@ interface Season {
   name: string;
   startDate: string;
   endDate: string;
-  registrationOpen: boolean;,
-        chatEnabled
+  registrationOpen: boolean;
+  chatEnabled: boolean;
   paymentRequired: boolean;
   paymentDueDate: string | null;
   status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';

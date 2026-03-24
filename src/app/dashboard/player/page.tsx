@@ -31,37 +31,6 @@ const US_STATES = [
 
 
 
-const DUMMY_ROOMS = [
-  {
-    id: 1, name: 'Team Chat', icon: '🏅',
-    lastMessage: "Coach: Don't forget practice Thursday at 6pm!",
-    time: '2h ago', unread: 3,
-    messages: [
-      { from: 'Coach Martinez', text: 'Great game last Tuesday everyone!',       time: 'Mar 25, 8:45 PM', self: false },
-      { from: 'You',            text: 'Thanks coach, that last goal was clutch 😄', time: 'Mar 25, 9:01 PM', self: true  },
-      { from: 'Tyler R.',       text: 'See everyone at practice Thursday?',       time: 'Mar 26, 10:12 AM', self: false },
-      { from: 'Coach Martinez', text: "Don't forget practice Thursday at 6pm!",  time: 'Today, 9:30 AM',  self: false },
-    ],
-  },
-  {
-    id: 2, name: 'Spring Season — All Players', icon: '🏆',
-    lastMessage: 'League: Week 4 schedule is now posted.',
-    time: '1d ago', unread: 1,
-    messages: [
-      { from: 'League Admin', text: 'Welcome to the Spring 2026 Season! Good luck to all teams.', time: 'Mar 1, 9:00 AM',   self: false },
-      { from: 'League Admin', text: 'Week 4 schedule is now posted.',                              time: 'Mar 25, 12:00 PM', self: false },
-    ],
-  },
-  {
-    id: 3, name: 'Division A', icon: '⚽',
-    lastMessage: 'Alex: Anyone know if Field 3 has lights?',
-    time: '3d ago', unread: 0,
-    messages: [
-      { from: 'Alex K.', text: 'Anyone know if Field 3 has lights?', time: 'Mar 22, 6:15 PM', self: false },
-    ],
-  },
-];
-
 
 // ─── Player Schedule Tab Component ───────────────────────────────────────────
 
@@ -233,9 +202,6 @@ export default function PlayerDashboard() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  const [activeRoom, setActiveRoom] = useState(DUMMY_ROOMS[0]);
-  const [chatInput, setChatInput] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
@@ -301,12 +267,6 @@ export default function PlayerDashboard() {
       setPasswordError(json.error ?? 'Failed to update password');
     }
     setSavingPassword(false);
-  }
-
-  function handleChatSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    setChatInput('');
   }
 
   const role = (session?.user as any)?.role ?? user?.role;
@@ -614,56 +574,6 @@ export default function PlayerDashboard() {
           {/* ── CHAT TAB ────────────────────────────────────────── */}
           {activeTab === 'chat' && (
             <PlayerChatTab userId={user?.id ?? (session?.user as any)?.id} />
-          )}
-                      className={`w-full text-left p-3 rounded-xl border transition-all duration-150 ${
-                        activeRoom.id === room.id
-                          ? 'bg-accent/10 border-accent/30'
-                          : 'bg-surface border-white/[0.06] hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-white text-sm font-semibold">{room.icon} {room.name}</span>
-                        {room.unread > 0 && (
-                          <span className="bg-accent text-navy text-xs font-black rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">{room.unread}</span>
-                        )}
-                      </div>
-                      <p className="text-gray-500 text-xs truncate">{room.lastMessage}</p>
-                      <p className="text-gray-600 text-xs mt-0.5">{room.time}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="md:col-span-2 bg-surface border border-white/[0.06] rounded-2xl flex flex-col" style={{ height: '420px' }}>
-                  <div className="px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
-                    <p className="text-white font-semibold text-sm">{activeRoom.icon} {activeRoom.name}</p>
-                  </div>
-                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                    {activeRoom.messages.map((msg, i) => (
-                      <div key={i} className={`flex flex-col ${msg.self ? 'items-end' : 'items-start'}`}>
-                        {!msg.self && <span className="text-xs text-gray-500 mb-1 px-1">{msg.from}</span>}
-                        <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
-                          msg.self
-                            ? 'bg-accent text-navy rounded-br-sm font-medium'
-                            : 'bg-navy border border-white/[0.06] text-white rounded-bl-sm'
-                        }`}>{msg.text}</div>
-                        <span className="text-xs text-gray-600 mt-1 px-1">{msg.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <form onSubmit={handleChatSend} className="px-3 py-3 border-t border-white/[0.06] flex gap-2 flex-shrink-0">
-                    <input
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      placeholder="Type a message…"
-                      className="flex-1 bg-navy border border-white/10 rounded-xl text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/50 placeholder-gray-600"
-                    />
-                    <button type="submit" className="bg-accent hover:bg-accent/90 text-navy font-bold px-4 py-2 rounded-xl text-sm transition-colors">
-                      Send
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
           )}
 
         </div>
