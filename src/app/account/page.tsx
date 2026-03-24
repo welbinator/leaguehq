@@ -150,7 +150,7 @@ export default function AccountPage() {
       <header className="bg-surface border-b border-white/[0.06] sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <span className="text-white font-bold text-sm">My Account</span>
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
+          <Link href={user?.role === 'PLAYER' || user?.role === 'CAPTAIN' ? '/dashboard/player' : '/dashboard'} className="text-sm text-gray-400 hover:text-white transition-colors">
             ← Dashboard
           </Link>
         </div>
