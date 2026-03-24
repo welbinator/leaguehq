@@ -635,7 +635,8 @@ function PlayerScheduleView({ leagueId, userId }: { leagueId: string; userId: st
 
 export default function SchedulePage({ params }: SchedulePageProps) {
   const { slug } = params;
-  const { data: session } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data ?? null;
   const [league, setLeague] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
