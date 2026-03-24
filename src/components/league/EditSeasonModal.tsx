@@ -112,22 +112,7 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
   const footer = (
     <>
       <Button variant="ghost" onClick={onClose}>Cancel</Button>
-      
-          {/* Season Chat */}
-          <div className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/[0.08] mt-4">
-            <div>
-              <p className="text-sm font-medium text-white">Season Chat</p>
-              <p className="text-xs text-gray-500 mt-0.5">All registered players can chat together</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setChatEnabled(v => !v)}
-              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${chatEnabled ? 'bg-accent' : 'bg-white/10'}`}
-            >
-              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${chatEnabled ? 'left-6' : 'left-1'}`} />
-            </button>
-          </div>
-          <Button onClick={handleSave} loading={saving}>Save Changes</Button>
+      <Button onClick={handleSave} loading={saving}>Save Changes</Button>
     </>
   );
 
@@ -248,6 +233,21 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
             </div>
           </div>
         )}
+      {/* Season Chat */}
+      <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+        <div>
+          <p className="text-sm font-semibold text-white">Season Chat</p>
+          <p className="text-xs text-gray-500 mt-0.5">All registered players can chat together</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setChatEnabled(v => !v)}
+          className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${chatEnabled ? 'bg-accent' : 'bg-white/10'}`}
+        >
+          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${chatEnabled ? 'left-6' : 'left-1'}`} />
+        </button>
+      </div>
+
       </div>
     </Modal>
   );
