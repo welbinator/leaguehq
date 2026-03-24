@@ -24,6 +24,7 @@ interface Season {
   startDate: string;
   endDate: string;
   registrationOpen: boolean;
+  chatEnabled: boolean;
   paymentRequired: boolean;
   paymentDueDate: string | null;
   status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
