@@ -149,7 +149,7 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
           <div className="text-5xl mb-4">🏆</div>
           <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
           <p className="text-gray-400 mb-4">{error ?? 'League not found.'}</p>
-          <Link href="/dashboard" className="text-accent hover:underline text-sm">← Back to dashboard</Link>
+          <Link href={isDirector ? "/dashboard" : "/dashboard/player"} className="text-accent hover:underline text-sm">← Back to dashboard</Link>
         </div>
       </div>
     );

@@ -22,18 +22,21 @@ export default function LeaguePage({ params }: LeaguePageProps) {
   const [loading, setLoading] = useState(true);
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDirector, setIsDirector] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2500); }
 
   useEffect(() => {
-    fetch(`/api/leagues/${slug}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setLeague(json.data);
-      })
-      .catch((e) => setError(e.message))
+    Promise.all([
+      fetch(`/api/leagues/${slug}`).then(r => r.json()),
+      fetch('/api/account').then(r => r.json()),
+    ]).then(([leagueJson, accountJson]) => {
+      if (leagueJson.error) throw new Error(leagueJson.error);
+      setLeague(leagueJson.data);
+      const uid = accountJson?.data?.id ?? null;
+      if (uid && leagueJson.data?.ownerId === uid) setIsDirector(true);
+    }).catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -52,7 +55,7 @@ export default function LeaguePage({ params }: LeaguePageProps) {
           <div className="text-5xl mb-4">🏆</div>
           <h2 className="text-xl font-bold text-white mb-2">League not found</h2>
           <p className="text-gray-400 mb-4">{error ?? 'This league does not exist.'}</p>
-          <Link href="/dashboard" className="text-accent hover:underline text-sm">← Back to dashboard</Link>
+          <Link href={isDirector ? "/dashboard" : "/dashboard/player"} className="text-accent hover:underline text-sm">← Back to dashboard</Link>
         </div>
       </div>
     );

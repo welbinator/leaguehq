@@ -75,7 +75,7 @@ export function LeagueNav({ slug }: { slug: string }) {
                   </Link>
                 );
               })}
-              <Link href="/dashboard"
+              <Link href={isDirector ? "/dashboard" : "/dashboard/player"}
                 className="ml-3 pl-3 border-l border-white/10 text-sm text-gray-500 hover:text-gray-300 whitespace-nowrap transition-colors">
                 ← Dashboard
               </Link>
@@ -135,7 +135,7 @@ export function LeagueNav({ slug }: { slug: string }) {
 
         {/* Back to dashboard */}
         <div className="px-3 py-4 border-t border-white/[0.06]">
-          <Link href="/dashboard"
+          <Link href={isDirector ? "/dashboard" : "/dashboard/player"}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
