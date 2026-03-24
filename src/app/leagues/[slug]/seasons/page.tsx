@@ -92,6 +92,7 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
   const [tab, setTab] = useState<TabFilter>('current');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingSeason, setEditingSeason] = useState<Season | null>(null);
+  const [isDirector, setIsDirector] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 2500); }
@@ -100,11 +101,16 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
     // Sync season statuses based on current date before loading
     fetch('/api/cron/season-status').catch(() => {});
     try {
-      const leagueRes = await fetch(`/api/leagues/${slug}`);
-      const leagueJson = await leagueRes.json();
+      const [leagueRes, accountRes] = await Promise.all([
+        fetch(`/api/leagues/${slug}`),
+        fetch('/api/account'),
+      ]);
+      const [leagueJson, accountJson] = await Promise.all([leagueRes.json(), accountRes.json()]);
       if (leagueJson.error) throw new Error(leagueJson.error);
       const l = leagueJson.data;
       setLeague(l);
+      const uid = accountJson?.data?.id ?? null;
+      setIsDirector(!!uid && l.ownerId === uid);
 
       const seasonsRes = await fetch(`/api/seasons?leagueId=${l.id}`);
       const seasonsJson = await seasonsRes.json();
@@ -167,7 +173,7 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
             <h1 className="text-2xl font-black text-white">Seasons</h1>
             <p className="text-gray-400 text-sm mt-0.5">{seasons.length} season{seasons.length !== 1 ? 's' : ''} total</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>+ New Season</Button>
+          {isDirector && <Button onClick={() => setCreateOpen(true)}>+ New Season</Button>}
         </div>
 
         {/* Tab Filter */}
@@ -283,12 +289,12 @@ export default function SeasonsPage({ params }: SeasonsPageProps) {
                         Copy Link
                       </button>
                     )}
-                    <button
+                    {isDirector && (<button
                       onClick={() => setEditingSeason(season)}
                       className="text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
                     >
                       Edit
-                    </button>
+                    </button>)}
                   </div>
                 </div>
               </Card>
