@@ -72,11 +72,13 @@ function groupGamesByScheduleGroup(games: GameRecord[]) {
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
+  // Use timeZone: 'UTC' so times display exactly as stored (no local offset applied).
+  // The server saves 9:00 AM as 09:00 UTC — we want to show 9:00 AM, not 4:00 AM CDT.
   return {
-    date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    month: d.toLocaleDateString('en-US', { month: 'short' }),
-    day: d.getDate(),
+    date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }),
+    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }),
+    month: d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+    day: d.getUTCDate(),
   };
 }
 
@@ -422,9 +424,9 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
                   return (
                     <tr key={i} className={`${i < preview.length - 1 ? 'border-b border-white/[0.04]' : ''} ${g.homeTeamId === 'TBD' ? 'opacity-40' : ''}`}>
                       <td className="py-2.5 pr-4 text-gray-300 whitespace-nowrap">
-                        {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}
                         <span className="text-gray-500 ml-2">
-                          {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })}
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-white font-medium">
