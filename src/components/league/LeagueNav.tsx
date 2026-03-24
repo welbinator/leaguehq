@@ -39,6 +39,7 @@ export function LeagueNav({ slug }: { slug: string }) {
   const tabs = [
     { label: 'Overview', href: `/leagues/${slug}` },
     { label: 'Teams', href: `/leagues/${slug}/teams` },
+    { label: 'Chat', href: `/leagues/${slug}/chat` },
     { label: 'Players', href: `/leagues/${slug}/players` },
     { label: 'Schedule', href: `/leagues/${slug}/schedule` },
     { label: 'Standings', href: `/leagues/${slug}/standings` },

@@ -136,7 +136,7 @@ model League {
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
   stripeCustomerId        String?
   stripeConnectAccountId  String?  // Connected Stripe account for collecting payments
-  teamChatsEnabled   Boolean            @default(false)
+  teamChatsEnabled   Boolean            @default(true)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -185,7 +185,7 @@ model Season {
   registrationOpen  Boolean      @default(false)
   paymentRequired   Boolean      @default(true)
   paymentDueDate    DateTime?
-  chatEnabled       Boolean      @default(false)
+  chatEnabled       Boolean      @default(true)
   status            SeasonStatus @default(UPCOMING)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
