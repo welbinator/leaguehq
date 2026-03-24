@@ -90,6 +90,7 @@ export function EditSeasonModal({ isOpen, onClose, season, onSaved }: EditSeason
           registrationOpen,
           paymentRequired,
           paymentDueDate: paymentDueDate || null,
+          chatEnabled,
           divisions: divisions.map(d => ({
             divisionId: d.divisionId,
             price: parseFloat(d.price) || 0,

@@ -13,13 +13,18 @@ const SPORT_EMOJI: Record<string, string> = {
 export function LeagueNav({ slug }: { slug: string }) {
   const pathname = usePathname();
   const [league, setLeague] = useState<any>(null);
+  const [isDirector, setIsDirector] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/leagues/${slug}`)
-      .then(r => r.json())
-      .then(json => { if (!json.error) setLeague(json.data); })
-      .catch(() => {});
+    Promise.all([
+      fetch(`/api/leagues/${slug}`).then(r => r.json()),
+      fetch('/api/account').then(r => r.json()),
+    ]).then(([leagueJson, accountJson]) => {
+      if (!leagueJson.error) setLeague(leagueJson.data);
+      const uid = accountJson?.data?.id ?? null;
+      if (uid && leagueJson.data?.ownerId === uid) setIsDirector(true);
+    }).catch(() => {});
   }, [slug]);
 
   // Close menu on route change
@@ -38,7 +43,7 @@ export function LeagueNav({ slug }: { slug: string }) {
     { label: 'Schedule', href: `/leagues/${slug}/schedule` },
     { label: 'Standings', href: `/leagues/${slug}/standings` },
     { label: 'Seasons', href: `/leagues/${slug}/seasons` },
-    { label: 'Settings', href: `/leagues/${slug}/settings` },
+    ...(isDirector ? [{ label: 'Settings', href: `/leagues/${slug}/settings` }] : []),
   ];
 
   const emoji = league ? (SPORT_EMOJI[league.sport] ?? '🏆') : '🏆';
