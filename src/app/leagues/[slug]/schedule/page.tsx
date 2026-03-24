@@ -97,7 +97,6 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (subscriptionTier === 'FREE') return;
     fetch(`/api/seasons?leagueId=${leagueId}`)
       .then(r => r.json())
       .then(j => setSeasons(j.data ?? []));
@@ -195,22 +194,9 @@ function ScheduleBuilder({ leagueId, subscriptionTier, onSaved }: {
     }
   };
 
-  if (subscriptionTier === 'FREE') {
-    return (
-      <Card>
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="text-5xl mb-4">🔒</div>
-          <h3 className="text-xl font-bold text-white mb-2">Schedule Generator</h3>
-          <p className="text-gray-400 mb-6 max-w-sm">
-            Automatically generate round-robin or playoff schedules for your league. Available on Starter and above.
-          </p>
-          <Button onClick={() => window.location.href = '/pricing'}>
-            Upgrade to Unlock
-          </Button>
-        </div>
-      </Card>
-    );
-  }
+  // Paywall gate — disabled for now, all tiers get access.
+  // To re-enable: check subscriptionTier === 'FREE' or a league.schedulerEnabled flag.
+  // if (subscriptionTier === 'FREE') { return <UpgradePrompt />; }
 
   return (
     <div className="space-y-6">
