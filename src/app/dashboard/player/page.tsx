@@ -185,7 +185,7 @@ export default function PlayerDashboard() {
   const session = sessionResult?.data;
   const status = sessionResult?.status;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('team');
+  const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
