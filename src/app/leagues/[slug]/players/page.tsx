@@ -43,6 +43,7 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [seasons, setSeasons] = useState<{ id: string; name: string; status: string }[]>([]);
   const [leagueId, setLeagueId] = useState('');
+  const [isDirector, setIsDirector] = useState(false);
 
   // Edit modal
   const [editing, setEditing] = useState<PlayerRow | null>(null);
@@ -57,11 +58,16 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 2500); }
 
   async function load() {
-    const leagueRes = await fetch(`/api/leagues/${slug}`);
-    const leagueJson = await leagueRes.json();
+    const [leagueRes, accountRes] = await Promise.all([
+      fetch(`/api/leagues/${slug}`),
+      fetch('/api/account'),
+    ]);
+    const [leagueJson, accountJson] = await Promise.all([leagueRes.json(), accountRes.json()]);
     if (!leagueJson.data) return;
     const lid = leagueJson.data.id;
     setLeagueId(lid);
+    const currentUserId = accountJson?.data?.id ?? null;
+    setIsDirector(!!currentUserId && leagueJson.data.ownerId === currentUserId);
 
     const [regRes, playerRes, teamRes] = await Promise.all([
       fetch(`/api/team-registrations?leagueId=${lid}`),
@@ -297,12 +303,14 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
                     <span className="text-xs text-gray-500">
                       {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
+                    {isDirector && (
                     <button
                       onClick={() => openEdit(p)}
                       className="text-xs text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
                     >
                       Edit
                     </button>
+                    )}
                   </div>
                 </div>
               </Card>
