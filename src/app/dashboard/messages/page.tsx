@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChatRoom } from '@/components/chat/ChatRoom';
@@ -13,7 +13,7 @@ interface DM {
   lastMessageAt: string | null;
 }
 
-export default function MessagesPage() {
+function MessagesInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const withUserId = searchParams.get('with');
@@ -146,5 +146,17 @@ export default function MessagesPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen bg-navy items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <MessagesInner />
+    </Suspense>
   );
 }
