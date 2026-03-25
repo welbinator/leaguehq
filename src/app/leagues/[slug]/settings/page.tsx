@@ -36,49 +36,6 @@ function Toggle({ enabled, onToggle, loading, label, description }: {
           enabled ? 'left-6' : 'left-1'
         }`} />
       </button>
-      <Card>
-        <h3 className="text-base font-bold text-white mb-4">📣 Send Notification</h3>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Audience</label>
-            <select
-              value={broadcastAudience}
-              onChange={e => setBroadcastAudience(e.target.value as any)}
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50"
-            >
-              <option value="league">All players in this league</option>
-              <option value="all">All players across all my leagues</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Title</label>
-            <input
-              value={broadcastTitle}
-              onChange={e => setBroadcastTitle(e.target.value)}
-              placeholder="e.g. Game cancelled tonight"
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Message</label>
-            <textarea
-              value={broadcastBody}
-              onChange={e => setBroadcastBody(e.target.value)}
-              placeholder="e.g. Due to weather, tonight's game at 7pm is cancelled."
-              rows={3}
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600 resize-none"
-            />
-          </div>
-          <button
-            onClick={sendBroadcast}
-            disabled={!broadcastTitle.trim() || !broadcastBody.trim() || sending}
-            className="w-full bg-accent hover:bg-accent/90 disabled:opacity-40 text-navy font-bold py-2.5 rounded-xl text-sm transition-colors"
-          >
-            {sending ? 'Sending…' : 'Send Notification'}
-          </button>
-        </div>
-      </Card>
-
     </div>
   );
 }
@@ -92,7 +49,6 @@ export default function LeagueSettingsPage({ params }: { params: { slug: string 
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastAudience, setBroadcastAudience] = useState<'all' | 'league' | 'season'>('league');
-  const [broadcastSeasonId, setBroadcastSeasonId] = useState('');
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState('');
 
@@ -113,34 +69,6 @@ export default function LeagueSettingsPage({ params }: { params: { slug: string 
 
   const isDirector = !!currentUserId && league?.ownerId === currentUserId;
 
-  async function sendBroadcast() {
-    if (!broadcastTitle.trim() || !broadcastBody.trim() || !league) return;
-    setSending(true);
-    try {
-      const res = await fetch('/api/push/broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: broadcastTitle.trim(),
-          body: broadcastBody.trim(),
-          audience: broadcastAudience,
-          leagueId: league.id,
-          seasonId: broadcastAudience === 'season' ? broadcastSeasonId : undefined,
-        }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        showToast(`Sent to ${json.sent ?? 0} players!`);
-        setBroadcastTitle('');
-        setBroadcastBody('');
-      } else {
-        showToast(json.error ?? 'Failed to send');
-      }
-    } finally {
-      setSending(false);
-    }
-  }
-
   async function toggle(field: 'teamChatsEnabled', value: boolean) {
     if (!league) return;
     setSaving(true);
@@ -159,6 +87,33 @@ export default function LeagueSettingsPage({ params }: { params: { slug: string 
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sendBroadcast() {
+    if (!broadcastTitle.trim() || !broadcastBody.trim() || !league) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/push/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: broadcastTitle.trim(),
+          body: broadcastBody.trim(),
+          audience: broadcastAudience,
+          leagueId: league.id,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        showToast(`Sent to ${json.sent ?? 0} players!`);
+        setBroadcastTitle('');
+        setBroadcastBody('');
+      } else {
+        showToast(json.error ?? 'Failed to send');
+      }
+    } finally {
+      setSending(false);
     }
   }
 
@@ -187,6 +142,7 @@ export default function LeagueSettingsPage({ params }: { params: { slug: string 
         <h2 className="text-2xl font-black text-white">League Settings</h2>
         <p className="text-gray-400 mt-1">{league?.name}</p>
       </div>
+
       <Card>
         <h3 className="text-base font-bold text-white mb-4">💬 Chat</h3>
         <div className="space-y-3">
@@ -199,49 +155,51 @@ export default function LeagueSettingsPage({ params }: { params: { slug: string 
           />
         </div>
       </Card>
-      <Card>
-        <h3 className="text-base font-bold text-white mb-4">📣 Send Notification</h3>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Audience</label>
-            <select
-              value={broadcastAudience}
-              onChange={e => setBroadcastAudience(e.target.value as any)}
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50"
-            >
-              <option value="league">All players in this league</option>
-              <option value="all">All players across all my leagues</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Title</label>
-            <input
-              value={broadcastTitle}
-              onChange={e => setBroadcastTitle(e.target.value)}
-              placeholder="e.g. Game cancelled tonight"
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Message</label>
-            <textarea
-              value={broadcastBody}
-              onChange={e => setBroadcastBody(e.target.value)}
-              placeholder="e.g. Due to weather, tonight's game at 7pm is cancelled."
-              rows={3}
-              className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600 resize-none"
-            />
-          </div>
-          <button
-            onClick={sendBroadcast}
-            disabled={!broadcastTitle.trim() || !broadcastBody.trim() || sending}
-            className="w-full bg-accent hover:bg-accent/90 disabled:opacity-40 text-navy font-bold py-2.5 rounded-xl text-sm transition-colors"
-          >
-            {sending ? 'Sending…' : 'Send Notification'}
-          </button>
-        </div>
-      </Card>
 
+      <div className="mt-6">
+        <Card>
+          <h3 className="text-base font-bold text-white mb-4">📣 Send Notification</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Audience</label>
+              <select
+                value={broadcastAudience}
+                onChange={e => setBroadcastAudience(e.target.value as any)}
+                className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50"
+              >
+                <option value="league">All players in this league</option>
+                <option value="all">All players across all my leagues</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Title</label>
+              <input
+                value={broadcastTitle}
+                onChange={e => setBroadcastTitle(e.target.value)}
+                placeholder="e.g. Game cancelled tonight"
+                className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wide">Message</label>
+              <textarea
+                value={broadcastBody}
+                onChange={e => setBroadcastBody(e.target.value)}
+                placeholder="e.g. Due to weather, tonight's game at 7pm is cancelled."
+                rows={3}
+                className="mt-1 w-full bg-navy border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent/50 placeholder-gray-600 resize-none"
+              />
+            </div>
+            <button
+              onClick={sendBroadcast}
+              disabled={!broadcastTitle.trim() || !broadcastBody.trim() || sending}
+              className="w-full bg-accent hover:bg-accent/90 disabled:opacity-40 text-navy font-bold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              {sending ? 'Sending…' : 'Send Notification'}
+            </button>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
