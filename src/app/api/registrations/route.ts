@@ -48,6 +48,43 @@ async function maybeAutoCloseRegistration(
 // POST /api/registrations — public, no auth required
 // Handles both captain (team) and player registrations using the new
 // Team + SeasonEnrollment architecture.
+
+// Auto-add player to chat rooms for their team and season
+async function addPlayerToChatRooms(userId: string, teamId: string | null, seasonId: string) {
+  try {
+    // Season chat
+    const seasonRoom = await prisma.chatRoom.findFirst({
+      where: { seasonId, type: 'SEASON' },
+      select: { id: true, leagueId: true },
+    });
+    // Check if season chat is enabled
+    const season = await prisma.season.findUnique({ where: { id: seasonId }, select: { chatEnabled: true, leagueId: true } });
+    if (season?.chatEnabled && seasonRoom) {
+      await prisma.chatMember.upsert({
+        where: { roomId_userId: { roomId: seasonRoom.id, userId } },
+        update: {},
+        create: { roomId: seasonRoom.id, userId },
+      });
+    }
+    // Team chat
+    if (teamId) {
+      const league = await prisma.league.findFirst({ where: { teams: { some: { id: teamId } } }, select: { teamChatsEnabled: true } });
+      if (league?.teamChatsEnabled) {
+        const teamRoom = await prisma.chatRoom.findFirst({ where: { teamId, type: 'TEAM' }, select: { id: true } });
+        if (teamRoom) {
+          await prisma.chatMember.upsert({
+            where: { roomId_userId: { roomId: teamRoom.id, userId } },
+            update: {},
+            create: { roomId: teamRoom.id, userId },
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error('addPlayerToChatRooms error:', e);
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
@@ -184,6 +221,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (userId) await addPlayerToChatRooms(userId, team.id, seasonId);
+
     await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
     return NextResponse.json({ data: { ...enrollment, captainRegistrationId: captainReg.id, id: enrollment.id } }, { status: 201 });
@@ -238,6 +277,8 @@ export async function POST(req: NextRequest) {
       update: { status: 'ACTIVE' },
     });
   }
+
+  if (userId) await addPlayerToChatRooms(userId, teamId ?? null, seasonId);
 
   await maybeAutoCloseRegistration(seasonId, season.league.ownerId, season.league.owner);
 
