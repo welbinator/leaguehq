@@ -382,12 +382,48 @@ export default function AccountPage() {
               type="button"
               onClick={async () => {
                 const newVal = !user?.pushNotificationsEnabled;
+
+                // If turning ON, request browser permission first
+                if (newVal) {
+                  if (!('Notification' in window)) {
+                    alert('This browser does not support push notifications.');
+                    return;
+                  }
+                  const permission = await Notification.requestPermission();
+                  if (permission !== 'granted') {
+                    alert('Notifications blocked. Please enable them in your browser/device settings, then try again.');
+                    return;
+                  }
+                  // Subscribe to push
+                  try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const keyRes = await fetch('/api/push/vapid-key');
+                    const { publicKey } = await keyRes.json();
+                    if (publicKey) {
+                      const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
+                      const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+                      const raw = atob(base64);
+                      const key = new Uint8Array(raw.length);
+                      for (let i = 0; i < raw.length; i++) key[i] = raw.charCodeAt(i);
+                      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as unknown as ArrayBuffer });
+                      await fetch('/api/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sub.toJSON()),
+                      });
+                    }
+                  } catch (err) {
+                    console.error('Push subscribe error:', err);
+                  }
+                }
+
                 await fetch('/api/account', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ pushNotificationsEnabled: newVal }),
                 });
                 setUser((u: any) => ({ ...u, pushNotificationsEnabled: newVal }));
+
                 if (!newVal) {
                   if ('serviceWorker' in navigator) {
                     const reg = await navigator.serviceWorker.ready;
