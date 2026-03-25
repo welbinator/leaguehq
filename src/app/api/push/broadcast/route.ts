@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (league?.ownerId !== directorId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const members = await prisma.teamMember.findMany({
-      where: { team: { leagueId }, status: 'ACTIVE', userId: { not: null } },
+      where: { team: { leagueId }, status: 'ACTIVE', userId: { not: undefined as any } },
       select: { userId: true },
     });
     userIds = [...new Set(members.map(m => m.userId!))];
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     if (season?.league.ownerId !== directorId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const regs = await prisma.playerRegistration.findMany({
-      where: { seasonId, userId: { not: null } },
+      where: { seasonId, userId: { not: undefined as any } },
       select: { userId: true },
     });
     userIds = [...new Set(regs.map(r => r.userId!))];
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const leagues = await prisma.league.findMany({ where: { ownerId: directorId }, select: { id: true } });
     const leagueIds = leagues.map(l => l.id);
     const members = await prisma.teamMember.findMany({
-      where: { team: { leagueId: { in: leagueIds } }, status: 'ACTIVE', userId: { not: null } },
+      where: { team: { leagueId: { in: leagueIds } }, status: 'ACTIVE', userId: { not: undefined as any } },
       select: { userId: true },
     });
     userIds = [...new Set(members.map(m => m.userId!))];
