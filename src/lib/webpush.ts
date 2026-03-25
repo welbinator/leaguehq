@@ -10,6 +10,8 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 
 export { webpush, VAPID_PUBLIC_KEY };
 
+const APP_URL = process.env.NEXTAUTH_URL || 'https://leaguehq.club';
+
 // Maps sport name → public icon path
 const SPORT_ICON_MAP: Record<string, string> = {
   Soccer:     '/icons/sports/soccer.png',
@@ -27,7 +29,8 @@ const SPORT_ICON_MAP: Record<string, string> = {
 };
 
 export function sportIcon(sport?: string | null): string {
-  return (sport && SPORT_ICON_MAP[sport]) || '/icons/icon-192.png';
+  const path = (sport && SPORT_ICON_MAP[sport]) || '/icons/icon-192.png';
+  return `${APP_URL}${path}`;
 }
 
 export async function sendPushToUser(
