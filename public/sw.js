@@ -1,4 +1,5 @@
-self.addEventListener('push', function(event) {
+// LeagueHQ Service Worker v2
+
   if (!event.data) return;
   const data = event.data.json();
   event.waitUntil(
