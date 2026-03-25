@@ -53,11 +53,27 @@ export function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomProps) {
     socket.on('disconnect', onDisconnect);
     socket.on('new-message', onMessage);
 
+    // Reconnect and re-fetch when tab becomes visible again after being idle
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        if (socket && !socket.connected) {
+          socket.connect();
+        }
+        socket?.emit('join-room', roomId);
+        // Re-fetch missed messages
+        fetch(`/api/chat/rooms/${roomId}/messages`)
+          .then(r => r.json())
+          .then(j => setMessages(j.data ?? []));
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
       socket?.emit('leave-room', roomId);
       socket?.off('connect', onConnect);
       socket?.off('disconnect', onDisconnect);
       socket?.off('new-message', onMessage);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [roomId]);
 
@@ -71,12 +87,24 @@ export function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomProps) {
     const text = input.trim();
     setInput('');
     setSending(true);
+
+    // Reconnect socket if it dropped while idle
+    if (socket && !socket.connected) {
+      socket.connect();
+      socket.emit('join-room', roomId);
+    }
+
     try {
-      await fetch(`/api/chat/rooms/${roomId}/messages`, {
+      const res = await fetch(`/api/chat/rooms/${roomId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: text }),
       });
+      const json = await res.json();
+      // Optimistically add own message if socket didn't already deliver it
+      if (json.data) {
+        setMessages(prev => prev.some(m => m.id === json.data.id) ? prev : [...prev, json.data]);
+      }
     } finally {
       setSending(false);
     }
