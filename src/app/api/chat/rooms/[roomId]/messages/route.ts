@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { sendPushToMany } from '@/lib/webpush';
+import { sendPushToMany, sportIcon } from '@/lib/webpush';
 
 export async function GET(
   _req: NextRequest,
@@ -66,7 +66,7 @@ export async function POST(
 
   const room = await prisma.chatRoom.findUnique({
     where: { id: roomId },
-    select: { name: true, type: true },
+    select: { name: true, type: true, league: { select: { sport: true } } },
   });
 
   const otherMembers = await prisma.chatMember.findMany({
@@ -82,6 +82,7 @@ export async function POST(
       body: content.trim().slice(0, 100),
       url,
       tag: `chat-${roomId}`,
+      icon: sportIcon(room?.league?.sport),
     }).catch(() => {});
   }
 

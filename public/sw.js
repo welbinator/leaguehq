@@ -4,8 +4,8 @@ self.addEventListener('push', function(event) {
   event.waitUntil(
     self.registration.showNotification(data.title || 'LeagueHQ', {
       body: data.body || '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: data.icon || '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       data: { url: data.url || '/dashboard/player' },
       tag: data.tag || 'leaguehq',
       renotify: true,

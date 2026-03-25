@@ -10,9 +10,29 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 
 export { webpush, VAPID_PUBLIC_KEY };
 
+// Maps sport name → public icon path
+const SPORT_ICON_MAP: Record<string, string> = {
+  Soccer:     '/icons/sports/soccer.png',
+  Basketball: '/icons/sports/basketball.png',
+  Baseball:   '/icons/sports/baseball.png',
+  Football:   '/icons/sports/football.png',
+  Volleyball: '/icons/sports/volleyball.png',
+  Tennis:     '/icons/sports/tennis.png',
+  Hockey:     '/icons/sports/hockey.png',
+  Softball:   '/icons/sports/softball.png',
+  Lacrosse:   '/icons/sports/lacrosse.png',
+  Rugby:      '/icons/sports/rugby.png',
+  Swimming:   '/icons/sports/swimming.png',
+  Track:      '/icons/sports/track.png',
+};
+
+export function sportIcon(sport?: string | null): string {
+  return (sport && SPORT_ICON_MAP[sport]) || '/icons/icon-192.png';
+}
+
 export async function sendPushToUser(
   userId: string,
-  payload: { title: string; body: string; url?: string; tag?: string }
+  payload: { title: string; body: string; url?: string; tag?: string; icon?: string }
 ) {
   const { prisma } = await import('./prisma');
   const user = await prisma.user.findUnique({
@@ -39,7 +59,7 @@ export async function sendPushToUser(
 
 export async function sendPushToMany(
   userIds: string[],
-  payload: { title: string; body: string; url?: string; tag?: string }
+  payload: { title: string; body: string; url?: string; tag?: string; icon?: string }
 ) {
   await Promise.allSettled(userIds.map(id => sendPushToUser(id, payload)));
 }
