@@ -50,34 +50,61 @@ async function maybeAutoCloseRegistration(
 // Team + SeasonEnrollment architecture.
 
 // Auto-add player to chat rooms for their team and season
+// Creates the room on-the-fly if it doesn't exist yet (handles out-of-order creation)
 async function addPlayerToChatRooms(userId: string, teamId: string | null, seasonId: string) {
   try {
-    // Season chat
-    const seasonRoom = await prisma.chatRoom.findFirst({
-      where: { seasonId, type: 'SEASON' },
-      select: { id: true, leagueId: true },
+    const season = await prisma.season.findUnique({
+      where: { id: seasonId },
+      select: { chatEnabled: true, leagueId: true, name: true },
     });
-    // Check if season chat is enabled
-    const season = await prisma.season.findUnique({ where: { id: seasonId }, select: { chatEnabled: true, leagueId: true } });
-    if (season?.chatEnabled && seasonRoom) {
+    if (!season) return;
+
+    // Season chat — create room if missing
+    if (season.chatEnabled) {
+      let seasonRoom = await prisma.chatRoom.findFirst({
+        where: { seasonId, type: 'SEASON' },
+        select: { id: true },
+      });
+      if (!seasonRoom) {
+        seasonRoom = await prisma.chatRoom.create({
+          data: { leagueId: season.leagueId, name: season.name, type: 'SEASON', seasonId },
+        });
+        // Auto-add the league director to any newly created season room
+        const league = await prisma.league.findUnique({ where: { id: season.leagueId }, select: { ownerId: true } });
+        if (league?.ownerId) {
+          await prisma.chatMember.upsert({
+            where: { roomId_userId: { roomId: seasonRoom.id, userId: league.ownerId } },
+            update: {},
+            create: { roomId: seasonRoom.id, userId: league.ownerId },
+          });
+        }
+      }
       await prisma.chatMember.upsert({
         where: { roomId_userId: { roomId: seasonRoom.id, userId } },
         update: {},
         create: { roomId: seasonRoom.id, userId },
       });
     }
-    // Team chat
+
+    // Team chat — create room if missing
     if (teamId) {
-      const league = await prisma.league.findFirst({ where: { teams: { some: { id: teamId } } }, select: { teamChatsEnabled: true } });
+      const league = await prisma.league.findFirst({
+        where: { teams: { some: { id: teamId } } },
+        select: { id: true, teamChatsEnabled: true },
+      });
       if (league?.teamChatsEnabled) {
-        const teamRoom = await prisma.chatRoom.findFirst({ where: { teamId, type: 'TEAM' }, select: { id: true } });
-        if (teamRoom) {
-          await prisma.chatMember.upsert({
-            where: { roomId_userId: { roomId: teamRoom.id, userId } },
-            update: {},
-            create: { roomId: teamRoom.id, userId },
+        let teamRoom = await prisma.chatRoom.findFirst({ where: { teamId, type: 'TEAM' }, select: { id: true } });
+        if (!teamRoom) {
+          const team = await prisma.team.findUnique({ where: { id: teamId }, select: { name: true } });
+          teamRoom = await prisma.chatRoom.create({
+            data: { leagueId: league.id, name: team?.name ?? 'Team Chat', type: 'TEAM', teamId },
           });
         }
+        await prisma.chatMember.upsert({
+          where: { roomId_userId: { roomId: teamRoom.id, userId } },
+          update: {},
+          create: { roomId: teamRoom.id, userId },
+        });
       }
     }
   } catch (e) {
