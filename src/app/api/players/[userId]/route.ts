@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { userId: str
       name: true,
       firstName: true,
       lastName: true,
-      teamMembers: {
+      teamMemberships: {
         where: { status: 'ACTIVE' },
         select: {
           id: true,

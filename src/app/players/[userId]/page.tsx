@@ -56,9 +56,9 @@ export default function PlayerProfilePage({ params }: { params: { userId: string
                   </div>
                   <div className="flex-1 min-w-0">
                     <h1 className="text-2xl font-black text-white">{displayName}</h1>
-                    {player.teamMembers?.length > 0 && (
+                    {player.teamMemberships?.length > 0 && (
                       <p className="text-gray-400 text-sm mt-0.5">
-                        {player.teamMembers.map((tm: any) => tm.team?.name).filter(Boolean).join(', ')}
+                        {player.teamMemberships.map((tm: any) => tm.team?.name).filter(Boolean).join(', ')}
                       </p>
                     )}
                   </div>
@@ -74,11 +74,11 @@ export default function PlayerProfilePage({ params }: { params: { userId: string
               </Card>
 
               {/* Teams */}
-              {player.teamMembers?.length > 0 && (
+              {player.teamMemberships?.length > 0 && (
                 <Card>
                   <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Teams</h2>
                   <div className="space-y-2">
-                    {player.teamMembers.map((tm: any) => (
+                    {player.teamMemberships.map((tm: any) => (
                       <div key={tm.id} className="flex items-center justify-between">
                         <span className="text-white text-sm font-medium">{tm.team?.name}</span>
                         <Badge variant="default">{tm.role?.toLowerCase()}</Badge>
