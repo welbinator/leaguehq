@@ -1,6 +1,7 @@
 'use client';
 
 import { ChatRoom } from '@/components/chat/ChatRoom';
+import { PushManager } from '@/components/push/PushManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -290,6 +291,7 @@ export default function PlayerDashboard() {
 
   return (
     <div className="flex min-h-screen bg-navy">
+      <PushManager />
       <Sidebar />
 
       <main className="flex-1 ml-14 md:ml-64 p-4 md:p-8">

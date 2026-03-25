@@ -1,0 +1,45 @@
+import webpush from 'web-push';
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
+const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:james.welbes@gmail.com';
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+export { webpush, VAPID_PUBLIC_KEY };
+
+export async function sendPushToUser(
+  userId: string,
+  payload: { title: string; body: string; url?: string; tag?: string }
+) {
+  const { prisma } = await import('./prisma');
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pushNotificationsEnabled: true, pushSubscriptions: true },
+  });
+  if (!user?.pushNotificationsEnabled) return;
+
+  const payloadStr = JSON.stringify(payload);
+  for (const sub of user.pushSubscriptions) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payloadStr
+      );
+    } catch (err: any) {
+      // 410 Gone = subscription expired, remove it
+      if (err.statusCode === 410) {
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      }
+    }
+  }
+}
+
+export async function sendPushToMany(
+  userIds: string[],
+  payload: { title: string; body: string; url?: string; tag?: string }
+) {
+  await Promise.allSettled(userIds.map(id => sendPushToUser(id, payload)));
+}

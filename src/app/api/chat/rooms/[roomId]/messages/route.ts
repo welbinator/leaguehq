@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendPushToMany } from '@/lib/webpush';
 
 export async function GET(
   _req: NextRequest,
@@ -53,8 +54,35 @@ export async function POST(
     },
   });
 
+  // Emit via Socket.io
   if ((global as any).io) {
     (global as any).io.to(roomId).emit('new-message', message);
+  }
+
+  // Push notifications — notify all other room members (async, don't block response)
+  const senderName = message.user.firstName
+    ? `${message.user.firstName}${message.user.lastName ? ' ' + message.user.lastName : ''}`
+    : message.user.name;
+
+  const room = await prisma.chatRoom.findUnique({
+    where: { id: roomId },
+    select: { name: true, type: true },
+  });
+
+  const otherMembers = await prisma.chatMember.findMany({
+    where: { roomId, userId: { not: userId } },
+    select: { userId: true },
+  });
+
+  const recipientIds = otherMembers.map(m => m.userId);
+  if (recipientIds.length > 0) {
+    const url = room?.type === 'DIRECT' ? '/dashboard/messages' : '/dashboard/player';
+    sendPushToMany(recipientIds, {
+      title: room?.type === 'DIRECT' ? `Message from ${senderName}` : `${senderName} in ${room?.name ?? 'chat'}`,
+      body: content.trim().slice(0, 100),
+      url,
+      tag: `chat-${roomId}`,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ data: message });

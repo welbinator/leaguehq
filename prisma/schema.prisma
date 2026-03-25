@@ -100,6 +100,7 @@ model User {
   zip       String?
   role      UserRole @default(PLAYER)
   avatarUrl String?
+  pushNotificationsEnabled Boolean @default(true)
   stripeCustomerId     String?
   subscriptionTier     String   @default("FREE")  // FREE, STARTER, GROWTH, PRO
   subscriptionStatus   String   @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED
@@ -117,6 +118,7 @@ model User {
   registrations     Registration[]
   chatMessages      ChatMessage[]
   chatMemberships   ChatMember[]
+  pushSubscriptions PushSubscription[]
   refereeProfiles   Referee[]
   refereedGames     Game[]         @relation("GameReferee")
 
@@ -507,4 +509,17 @@ model SeasonEnrollment {
   @@unique([teamId, seasonId])
   @@index([seasonId])
   @@index([teamId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
