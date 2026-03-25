@@ -7,9 +7,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { StripeConnectCard } from '@/components/stripe/StripeConnectCard';
 
 const SPORT_EMOJI: Record<string, string> = {
   Soccer: '⚽', Basketball: '🏀', Baseball: '⚾', Football: '🏈',
@@ -17,12 +16,7 @@ const SPORT_EMOJI: Record<string, string> = {
   Lacrosse: '🥍', Rugby: '🏉', Other: '🏆',
 };
 
-interface StripeStatus {
-  connected: boolean;
-  complete: boolean;
-  chargesEnabled?: boolean;
-  payoutsEnabled?: boolean;
-}
+
 
 interface League {
   id: string;
@@ -36,10 +30,7 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [stripeStatuses, setStripeStatuses] = useState<Record<string, StripeStatus>>({});
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState<string | null>(null);
-  const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
@@ -54,21 +45,6 @@ function SettingsContent() {
     const json = await res.json();
     const data: League[] = json.data ?? [];
     setLeagues(data);
-
-    // Load Stripe status for each league in parallel
-    const statuses: Record<string, StripeStatus> = {};
-    await Promise.all(
-      data.map(async (league) => {
-        try {
-          const r = await fetch(`/api/stripe/connect/status?leagueId=${league.id}`);
-          const s = await r.json();
-          statuses[league.id] = s;
-        } catch {
-          statuses[league.id] = { connected: false, complete: false };
-        }
-      })
-    );
-    setStripeStatuses(statuses);
     setLoading(false);
   }
 
@@ -89,56 +65,14 @@ function SettingsContent() {
     if (searchParams.get('connect_success') === '1' && leagueId) {
       showToast('Stripe connected successfully!');
       fetch(`/api/stripe/connect/status?leagueId=${leagueId}`)
-        .then(r => r.json())
-        .then(s => setStripeStatuses(prev => ({ ...prev, [leagueId]: s })));
+                .then(r => r.json())
+        .then(() => { /* StripeConnectCard handles its own status */ });
     }
     if (searchParams.get('connect_refresh') === '1') {
       const errMsg = searchParams.get('error');
       showToast(errMsg ? `Stripe error: ${errMsg}` : 'Connection cancelled or incomplete — please try again.', 'error');
     }
   }, [searchParams]);
-
-  async function connectStripe(league: League) {
-    setConnecting(league.id);
-    try {
-      const res = await fetch('/api/stripe/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leagueId: league.id }),
-      });
-      const json = await res.json();
-      if (json.url) {
-        window.location.href = json.url;
-      } else {
-        showToast(json.error ?? 'Failed to start Stripe onboarding', 'error');
-        setConnecting(null);
-      }
-    } catch {
-      showToast('Something went wrong', 'error');
-      setConnecting(null);
-    }
-  }
-
-  async function disconnectStripe(league: League) {
-    if (!confirm(`Disconnect Stripe from ${league.name}? Players won't be able to pay until you reconnect.`)) return;
-    setDisconnecting(league.id);
-    try {
-      const res = await fetch('/api/stripe/disconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leagueId: league.id }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setStripeStatuses(prev => ({ ...prev, [league.id]: { connected: false, complete: false } }));
-        showToast('Stripe disconnected.');
-      } else {
-        showToast(json.error ?? 'Failed to disconnect', 'error');
-      }
-    } finally {
-      setDisconnecting(null);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-navy flex">
@@ -186,112 +120,18 @@ function SettingsContent() {
                 <p className="text-gray-400 text-sm mb-5">
                   Connect Stripe to each league so players can pay registration fees directly to you.
                 </p>
-
-                <div className="space-y-4">
-                  {leagues.map(league => {
-                    const status = stripeStatuses[league.id];
-                    const fullyConnected = status?.connected && status?.complete && status?.chargesEnabled;
-                    const incompleteSetup = status?.connected && (!status?.complete || !status?.chargesEnabled);
-                    const isConnecting = connecting === league.id;
-                    const isDisconnecting = disconnecting === league.id;
-
-                    return (
-                      <div key={league.id} className="p-4 bg-navy rounded-xl border border-white/10">
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">{SPORT_EMOJI[league.sport] ?? '🏆'}</span>
-                            <div>
-                              <Link href={`/leagues/${league.slug}`} className="text-white font-semibold hover:text-accent transition-colors text-sm">
-                                {league.name}
-                              </Link>
-                              <div className="mt-1">
-                                {!status ? (
-                                  <span className="text-xs text-gray-500">Checking...</span>
-                                ) : fullyConnected ? (
-                                  <Badge variant="success" dot>Connected</Badge>
-                                ) : incompleteSetup ? (
-                                  <Badge variant="warning" dot>Setup Incomplete</Badge>
-                                ) : (
-                                  <Badge variant="default" dot>Not Connected</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {fullyConnected ? (
-                              <>
-                                <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                                  <span className="text-accent">✓</span> Charges enabled
-                                </span>
-                                <button
-                                  onClick={() => disconnectStripe(league)}
-                                  disabled={isDisconnecting}
-                                  className="text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
-                                >
-                                  {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                                </button>
-                              </>
-                            ) : incompleteSetup ? (
-                              <Button onClick={() => connectStripe(league)} loading={isConnecting}>
-                                Resume Setup →
-                              </Button>
-                            ) : (
-                              <Button onClick={() => connectStripe(league)} loading={isConnecting}>
-                                Connect Stripe →
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {incompleteSetup && (
-                          <p className="text-xs text-yellow-400/80 mt-3 pl-11">
-                            ⚠️ Complete Stripe onboarding to start accepting payments
-                          </p>
-                        )}
-
-                        {fullyConnected && (
-                          <div className="mt-4 p-4 bg-navy/60 rounded-xl border border-white/10 space-y-3">
-                            <div className="flex items-start gap-2">
-                              <span className="text-lg">🔔</span>
-                              <div>
-                                <p className="text-sm font-semibold text-white">One-time webhook setup required</p>
-                                <p className="text-gray-400 text-xs mt-1">To receive payment confirmations, add a webhook endpoint in your Stripe dashboard.</p>
-                              </div>
-                            </div>
-                            <ol className="space-y-2 text-xs text-gray-400 list-none pl-0">
-                              <li className="flex gap-2">
-                                <span className="text-accent font-bold flex-shrink-0">1.</span>
-                                <span>Go to <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Stripe Dashboard → Developers → Webhooks</a> and click <strong className="text-white">Add destination</strong></span>
-                              </li>
-                              <li className="flex gap-2">
-                                <span className="text-accent font-bold flex-shrink-0">2.</span>
-                                <span>Set the endpoint URL to: <code className="bg-white/5 px-1.5 py-0.5 rounded text-white font-mono select-all">https://leaguehq.club/api/stripe/webhook</code></span>
-                              </li>
-                              <li className="flex gap-2">
-                                <span className="text-accent font-bold flex-shrink-0">3.</span>
-                                <span>
-                                  Select these events:
-                                  <ul className="mt-1.5 space-y-1 pl-2">
-                                    {['checkout.session.completed','customer.subscription.updated','customer.subscription.deleted','invoice.payment_failed'].map(e => (
-                                      <li key={e} className="flex items-center gap-1.5">
-                                        <span className="w-1 h-1 rounded-full bg-accent flex-shrink-0" />
-                                        <code className="font-mono text-white/80">{e}</code>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </span>
-                              </li>
-                              <li className="flex gap-2">
-                                <span className="text-accent font-bold flex-shrink-0">4.</span>
-                                <span>After saving, copy the <strong className="text-white">Signing Secret</strong> (<code className="font-mono">whsec_…</code>) and add it as <code className="font-mono text-white">STRIPE_WEBHOOK_SECRET</code> in your Railway environment variables.</span>
-                              </li>
-                            </ol>
-                          </div>
-                        )}
+                <div className="space-y-6">
+                  {leagues.map(league => (
+                    <div key={league.id} className="p-4 bg-navy rounded-xl border border-white/10">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-2xl">{SPORT_EMOJI[league.sport] ?? '🏆'}</span>
+                        <Link href={`/leagues/${league.slug}`} className="text-white font-semibold hover:text-accent transition-colors text-sm">
+                          {league.name}
+                        </Link>
                       </div>
-                    );
-                  })}
+                      <StripeConnectCard league={league} />
+                    </div>
+                  ))}
                 </div>
               </Card>
 
