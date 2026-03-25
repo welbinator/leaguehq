@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       where: { team: { leagueId }, status: 'ACTIVE', userId: { not: undefined as any } },
       select: { userId: true },
     });
-    userIds = [...new Set(members.map(m => m.userId!))];
+    userIds = Array.from(new Set(members.map(m => m.userId).filter((id): id is string => !!id)));
 
   } else if (audience === 'season' && seasonId) {
     const season = await prisma.season.findUnique({
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       where: { seasonId, userId: { not: undefined as any } },
       select: { userId: true },
     });
-    userIds = [...new Set(regs.map(r => r.userId!))];
+    userIds = Array.from(new Set(regs.map(r => r.userId).filter((id): id is string => !!id)));
 
   } else if (audience === 'all') {
     // All players across all leagues owned by this director
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       where: { team: { leagueId: { in: leagueIds } }, status: 'ACTIVE', userId: { not: undefined as any } },
       select: { userId: true },
     });
-    userIds = [...new Set(members.map(m => m.userId!))];
+    userIds = Array.from(new Set(members.map(m => m.userId).filter((id): id is string => !!id)));
   } else {
     return NextResponse.json({ error: 'Invalid audience' }, { status: 400 });
   }
