@@ -48,16 +48,35 @@ export async function POST(req: NextRequest) {
 
     // Platform subscription checkout (director buying a LeagueHQ plan)
     if (session.mode === 'subscription' && session.metadata?.userId) {
-      const tier = session.metadata.tier ?? 'STARTER';
+      const tier = (session.metadata.tier ?? 'STARTER') as 'STARTER' | 'GROWTH' | 'PRO';
+      const userId = session.metadata.userId;
+      const leagueId = session.metadata.leagueId;
+      const subId = typeof session.subscription === 'string' ? session.subscription : null;
+
+      // Update User subscription fields
       await prisma.user.update({
-        where: { id: session.metadata.userId },
+        where: { id: userId },
         data: {
           subscriptionTier: tier,
           subscriptionStatus: 'ACTIVE',
-          stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+          stripeSubscriptionId: subId,
         },
       });
-      console.log(`[webhook] User ${session.metadata.userId} subscribed to ${tier}`);
+
+      // Update League — use leagueId from metadata if present, otherwise find first owned league
+      if (leagueId) {
+        await prisma.league.update({
+          where: { id: leagueId },
+          data: { subscriptionTier: tier, subscriptionStatus: 'ACTIVE' },
+        });
+      } else {
+        // Fallback: update all leagues owned by this user
+        await prisma.league.updateMany({
+          where: { ownerId: userId },
+          data: { subscriptionTier: tier, subscriptionStatus: 'ACTIVE' },
+        });
+      }
+      console.log(`[webhook] User ${userId} / league ${leagueId ?? 'all'} subscribed to ${tier}`);
     }
 
     // League registration payment (fired from connected account via Connect webhook)
@@ -140,14 +159,21 @@ export async function POST(req: NextRequest) {
         status = 'ACTIVE';
       } else if (sub.status === 'past_due') {
         status = 'PAST_DUE';
+      } else if (sub.status === 'canceled') {
+        status = 'CANCELLED';
       } else {
-        status = 'INACTIVE';
+        status = 'CANCELLED';
       }
       await prisma.user.update({
         where: { id: user.id },
         data: { subscriptionStatus: status },
       });
-      console.log(`[webhook] User ${user.id} subscription ${sub.id} → ${status} (stripe: ${sub.status})`);
+      // Also update all leagues owned by this user
+      await prisma.league.updateMany({
+        where: { ownerId: user.id },
+        data: { subscriptionStatus: status as 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' },
+      });
+      console.log(`[webhook] User ${user.id} / leagues subscription ${sub.id} → ${status} (stripe: ${sub.status})`);
     }
 
     return NextResponse.json({ received: true });
