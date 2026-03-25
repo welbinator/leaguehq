@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
@@ -33,6 +34,7 @@ interface League {
 
 function SettingsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [stripeStatuses, setStripeStatuses] = useState<Record<string, StripeStatus>>({});
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,15 @@ function SettingsContent() {
     setStripeStatuses(statuses);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetch('/api/account').then(r => r.json()).then(j => {
+      const role = j.data?.role;
+      if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
+        router.replace('/dashboard/player');
+      }
+    }).catch(() => {});
+  }, [router]);
 
   useEffect(() => { loadLeagues(); }, []);
 
