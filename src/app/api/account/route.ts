@@ -26,6 +26,7 @@ export async function GET() {
       zip: true,
       role: true,
       avatarUrl: true,
+      pushNotificationsEnabled: true,
       subscriptionTier: true,
       subscriptionStatus: true,
       stripeSubscriptionId: true,
@@ -41,7 +42,7 @@ export async function GET() {
           stripeConnectAccountId: true,
         },
       },
-      registrations: {
+      playerRegistrations: {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,

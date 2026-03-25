@@ -377,12 +377,12 @@ export default function AccountPage() {
               </Card>
             )}
 
-            {user.registrations?.length > 0 && (
+            {user.playerRegistrations?.length > 0 && (
               <Card>
                 <h2 className="text-xl font-bold text-white mb-1">Recent Registrations</h2>
                 <p className="text-gray-400 text-sm mb-5">Your last 5 season registrations</p>
                 <div className="space-y-3">
-                  {user.registrations.map((reg: any) => (
+                  {user.playerRegistrations.map((reg: any) => (
                     <div key={reg.id} className="flex items-center justify-between py-3 border-b border-white/[0.06] last:border-0">
                       <div>
                         <p className="text-white font-medium">{reg.season?.league?.name}</p>
@@ -397,7 +397,7 @@ export default function AccountPage() {
               </Card>
             )}
 
-            {user.registrations?.length === 0 && user.captainedTeams?.length === 0 && (
+            {user.playerRegistrations?.length === 0 && user.captainedTeams?.length === 0 && (
               <Card>
                 <div className="text-center py-8">
                   <div className="text-4xl mb-3">🏅</div>
