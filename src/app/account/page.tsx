@@ -289,11 +289,11 @@ export default function AccountPage() {
                           {league.name}
                         </Link>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIER_COLOR[league.subscriptionTier] ?? TIER_COLOR.FREE}`}>
-                            {TIER_LABELS[league.subscriptionTier] ?? league.subscriptionTier} Plan
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIER_COLOR[user.subscriptionTier] ?? TIER_COLOR.FREE}`}>
+                            {TIER_LABELS[user.subscriptionTier] ?? user.subscriptionTier} Plan
                           </span>
-                          <Badge variant={STATUS_VARIANT[league.subscriptionStatus] ?? 'default'} dot>
-                            {league.subscriptionStatus.charAt(0) + league.subscriptionStatus.slice(1).toLowerCase().replace('_', ' ')}
+                          <Badge variant={STATUS_VARIANT[user.subscriptionStatus] ?? 'default'} dot>
+                            {(user.subscriptionStatus ?? 'ACTIVE').charAt(0) + (user.subscriptionStatus ?? 'ACTIVE').slice(1).toLowerCase().replace('_', ' ')}
                           </Badge>
                         </div>
                       </div>
