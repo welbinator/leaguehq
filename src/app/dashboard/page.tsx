@@ -130,8 +130,10 @@ export default function DashboardPage() {
   const totalTeams = leagues.reduce((sum: number, l: any) => sum + (l.teamRegCount ?? 0), 0);
   const totalPlayers = leagues.reduce((sum: number, l: any) => sum + (l.playerRegCount ?? 0), 0);
 
-  // Don't render director dashboard for players — show spinner while redirect fires
-  if (status === 'loading') {
+  // Redirect players immediately — before any data loads or renders
+  const role = (session?.user as any)?.role;
+  if (status !== 'loading' && role && (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE')) {
+    router.replace('/dashboard/player');
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -139,8 +141,8 @@ export default function DashboardPage() {
     );
   }
 
-  const role = (session?.user as any)?.role;
-  if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
+  // Don't render director dashboard for players — show spinner while redirect fires
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
