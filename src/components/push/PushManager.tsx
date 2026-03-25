@@ -8,24 +8,19 @@ export function PushManager() {
 
     async function setup() {
       try {
-        // Register service worker
         const reg = await navigator.serviceWorker.register('/sw.js');
 
-        // Get VAPID public key
         const keyRes = await fetch('/api/push/vapid-key');
         const { publicKey } = await keyRes.json();
         if (!publicKey) return;
 
-        // Check user's push setting
         const accountRes = await fetch('/api/account');
         const accountJson = await accountRes.json();
         if (!accountJson.data?.pushNotificationsEnabled) return;
 
-        // Check current permission
         const permission = Notification.permission;
         if (permission === 'denied') return;
 
-        // Subscribe (or get existing subscription)
         let sub = await reg.pushManager.getSubscription();
         if (!sub) {
           if (permission !== 'granted') {
@@ -38,7 +33,6 @@ export function PushManager() {
           });
         }
 
-        // Register with server
         await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -55,9 +49,13 @@ export function PushManager() {
   return null;
 }
 
-function urlBase64ToUint8Array(base64String: string) {
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    output[i] = rawData.charCodeAt(i);
+  }
+  return output;
 }
