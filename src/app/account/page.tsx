@@ -446,6 +446,14 @@ export default function AccountPage() {
           </div>
         </Card>
 
+        {/* App version */}
+        <p className="text-center text-xs text-gray-600 mt-2">
+          LeagueHQ v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
+          {process.env.NEXT_PUBLIC_BUILD_SHA && process.env.NEXT_PUBLIC_BUILD_SHA !== 'local' && (
+            <span className="ml-1 opacity-50">({process.env.NEXT_PUBLIC_BUILD_SHA})</span>
+          )}
+        </p>
+
       </div>
     </div>
   );
