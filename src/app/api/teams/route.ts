@@ -72,5 +72,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Auto-create team chat room (director is NOT auto-added — they use the Join button)
+  await prisma.chatRoom.create({
+    data: { leagueId, name: name.trim(), type: 'TEAM', teamId: team.id },
+  });
+
   return NextResponse.json({ data: team }, { status: 201 });
 }

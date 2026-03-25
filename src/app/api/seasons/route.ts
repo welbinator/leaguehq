@@ -95,5 +95,20 @@ export async function POST(req: NextRequest) {
     });
   });
 
+  // Auto-create season chat room and add the league director
+  if (season) {
+    const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { ownerId: true } });
+    const room = await prisma.chatRoom.create({
+      data: { leagueId, name, type: 'SEASON', seasonId: season.id },
+    });
+    if (league?.ownerId) {
+      await prisma.chatMember.upsert({
+        where: { roomId_userId: { roomId: room.id, userId: league.ownerId } },
+        create: { roomId: room.id, userId: league.ownerId },
+        update: {},
+      });
+    }
+  }
+
   return NextResponse.json({ data: season }, { status: 201 });
 }
