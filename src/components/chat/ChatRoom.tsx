@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { io, Socket } from 'socket.io-client';
 
 interface Message {
@@ -108,7 +109,11 @@ export function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomProps) {
                 {displayName(msg.user).charAt(0).toUpperCase()}
               </div>
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                {!isMe && <span className="text-xs text-gray-500 px-1">{displayName(msg.user)}</span>}
+                {!isMe && (
+                  <Link href={`/players/${msg.user.id}`} className="text-xs text-gray-500 hover:text-accent px-1 transition-colors">
+                    {displayName(msg.user)}
+                  </Link>
+                )}
                 <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
                   isMe
                     ? 'bg-accent text-navy font-medium rounded-tr-sm'
