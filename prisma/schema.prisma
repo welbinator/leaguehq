@@ -76,6 +76,7 @@ enum PricingType {
 
 enum ChatRoomType {
   TEAM
+  DIRECT
   LEAGUE
   SEASON
   CUSTOM
@@ -340,7 +341,7 @@ model Registration {
 
 model ChatRoom {
   id          String       @id @default(cuid())
-  leagueId    String
+  leagueId    String?
   name        String
   type        ChatRoomType @default(CUSTOM)
   teamId      String?
@@ -350,7 +351,7 @@ model ChatRoom {
   updatedAt   DateTime     @updatedAt
 
   // Relations
-  league   League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  league   League?       @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   team     Team?         @relation(fields: [teamId], references: [id])
   season   Season?       @relation(fields: [seasonId], references: [id])
   messages ChatMessage[]

@@ -528,8 +528,16 @@ export default function PlayerDashboard() {
                                     {memberName}
                                     {m.user?.id === user?.id && <span className="text-gray-500 text-xs ml-1">(you)</span>}
                                   </p>
+                                  <p className="text-xs text-gray-500 capitalize">{m.role?.toLowerCase()}</p>
                                 </div>
-                                <span className="text-xs text-gray-500 capitalize">{m.role?.toLowerCase()}</span>
+                                {m.user?.id && m.user.id !== user?.id && (
+                                  <button
+                                    onClick={() => router.push(`/dashboard/messages?with=${m.user.id}`)}
+                                    className="text-xs text-accent hover:text-accent/80 font-medium px-2 py-1 rounded-lg border border-accent/20 hover:bg-accent/10 transition-colors flex-shrink-0"
+                                  >
+                                    Message
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
