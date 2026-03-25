@@ -249,6 +249,46 @@ function SettingsContent() {
                             ⚠️ Complete Stripe onboarding to start accepting payments
                           </p>
                         )}
+
+                        {fullyConnected && (
+                          <div className="mt-4 p-4 bg-navy/60 rounded-xl border border-white/10 space-y-3">
+                            <div className="flex items-start gap-2">
+                              <span className="text-lg">🔔</span>
+                              <div>
+                                <p className="text-sm font-semibold text-white">One-time webhook setup required</p>
+                                <p className="text-gray-400 text-xs mt-1">To receive payment confirmations, add a webhook endpoint in your Stripe dashboard.</p>
+                              </div>
+                            </div>
+                            <ol className="space-y-2 text-xs text-gray-400 list-none pl-0">
+                              <li className="flex gap-2">
+                                <span className="text-accent font-bold flex-shrink-0">1.</span>
+                                <span>Go to <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Stripe Dashboard → Developers → Webhooks</a> and click <strong className="text-white">Add destination</strong></span>
+                              </li>
+                              <li className="flex gap-2">
+                                <span className="text-accent font-bold flex-shrink-0">2.</span>
+                                <span>Set the endpoint URL to: <code className="bg-white/5 px-1.5 py-0.5 rounded text-white font-mono select-all">https://leaguehq.club/api/stripe/webhook</code></span>
+                              </li>
+                              <li className="flex gap-2">
+                                <span className="text-accent font-bold flex-shrink-0">3.</span>
+                                <span>
+                                  Select these events:
+                                  <ul className="mt-1.5 space-y-1 pl-2">
+                                    {['checkout.session.completed','customer.subscription.updated','customer.subscription.deleted','invoice.payment_failed'].map(e => (
+                                      <li key={e} className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-accent flex-shrink-0" />
+                                        <code className="font-mono text-white/80">{e}</code>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </span>
+                              </li>
+                              <li className="flex gap-2">
+                                <span className="text-accent font-bold flex-shrink-0">4.</span>
+                                <span>After saving, copy the <strong className="text-white">Signing Secret</strong> (<code className="font-mono">whsec_…</code>) and add it as <code className="font-mono text-white">STRIPE_WEBHOOK_SECRET</code> in your Railway environment variables.</span>
+                              </li>
+                            </ol>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
