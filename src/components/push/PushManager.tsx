@@ -29,7 +29,7 @@ export function PushManager() {
           }
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey).buffer,
+            applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as ArrayBuffer,
           });
         }
 
