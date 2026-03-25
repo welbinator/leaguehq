@@ -46,7 +46,7 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
-          status: true,
+          paymentStatus: true,
           createdAt: true,
           teamId: true,
           team: {

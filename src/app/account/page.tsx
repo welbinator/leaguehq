@@ -388,8 +388,8 @@ export default function AccountPage() {
                         <p className="text-white font-medium">{reg.season?.league?.name}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{reg.season?.name}</p>
                       </div>
-                      <Badge variant={reg.status === 'ACTIVE' ? 'success' : reg.status === 'PENDING' ? 'warning' : 'default'}>
-                        {reg.status.charAt(0) + reg.status.slice(1).toLowerCase()}
+                      <Badge variant={reg.paymentStatus === 'paid' ? 'success' : reg.paymentStatus === 'pending' ? 'warning' : 'default'}>
+                        {reg.paymentStatus ? reg.paymentStatus.charAt(0).toUpperCase() + reg.paymentStatus.slice(1) : 'Registered'}
                       </Badge>
                     </div>
                   ))}
