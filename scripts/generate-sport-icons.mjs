@@ -1,5 +1,5 @@
 // scripts/generate-sport-icons.mjs
-// Generates 192x192 PNG sport icons for push notifications
+// Downloads OpenMoji SVGs and converts to 192x192 PNGs for push notifications
 import sharp from 'sharp';
 import { writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -9,31 +9,32 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = join(__dirname, '../public/icons/sports');
 mkdirSync(outDir, { recursive: true });
 
+// OpenMoji unicode codepoints for each sport
 const sports = [
-  { key: 'Soccer',      emoji: '⚽', bg: '#16a34a' },
-  { key: 'Basketball',  emoji: '🏀', bg: '#ea580c' },
-  { key: 'Baseball',    emoji: '⚾', bg: '#2563eb' },
-  { key: 'Football',    emoji: '🏈', bg: '#854d0e' },
-  { key: 'Volleyball',  emoji: '🏐', bg: '#7c3aed' },
-  { key: 'Tennis',      emoji: '🎾', bg: '#65a30d' },
-  { key: 'Hockey',      emoji: '🏒', bg: '#0891b2' },
-  { key: 'Softball',    emoji: '🥎', bg: '#db2777' },
-  { key: 'Lacrosse',    emoji: '🥍', bg: '#0f766e' },
-  { key: 'Rugby',       emoji: '🏉', bg: '#b45309' },
-  { key: 'Swimming',    emoji: '🏊', bg: '#0369a1' },
-  { key: 'Track',       emoji: '🏃', bg: '#dc2626' },
+  { key: 'soccer',     code: '26BD' }, // ⚽
+  { key: 'basketball', code: '1F3C0' }, // 🏀
+  { key: 'baseball',   code: '26BE' }, // ⚾
+  { key: 'football',   code: '1F3C8' }, // 🏈
+  { key: 'volleyball', code: '1F3D0' }, // 🏐
+  { key: 'tennis',     code: '1F3BE' }, // 🎾
+  { key: 'hockey',     code: '1F3D2' }, // 🏒
+  { key: 'softball',   code: '1F94E' }, // 🥎
+  { key: 'lacrosse',   code: '1F94D' }, // 🥍
+  { key: 'rugby',      code: '1F3C9' }, // 🏉
+  { key: 'swimming',   code: '1F3CA' }, // 🏊
+  { key: 'track',      code: '1F3C3' }, // 🏃
 ];
 
-for (const sport of sports) {
-  const size = 192;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-  <circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="${sport.bg}"/>
-  <text x="${size/2}" y="${size/2 + 38}" font-size="100" text-anchor="middle" dominant-baseline="middle">${sport.emoji}</text>
-</svg>`;
+const BASE = 'https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/svg';
 
-  const filename = join(outDir, `${sport.key.toLowerCase()}.png`);
-  await sharp(Buffer.from(svg)).png().toFile(filename);
-  console.log(`✓ ${sport.key} → ${filename}`);
+for (const sport of sports) {
+  const url = `${BASE}/${sport.code}.svg`;
+  const res = await fetch(url);
+  if (!res.ok) { console.error(`✗ ${sport.key}: HTTP ${res.status}`); continue; }
+  const svgBuffer = Buffer.from(await res.arrayBuffer());
+  const outPath = join(outDir, `${sport.key}.png`);
+  await sharp(svgBuffer).resize(192, 192).png().toFile(outPath);
+  console.log(`✓ ${sport.key}`);
 }
 
-console.log('\nDone! Icons written to public/icons/sports/');
+console.log('\nDone!');
