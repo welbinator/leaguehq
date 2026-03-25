@@ -27,7 +27,6 @@ export function Sidebar() {
 
   const navItems = [
     { label: 'Dashboard', href: isPlayer ? '/dashboard/player' : '/dashboard', icon: ICON_DASHBOARD },
-    ...(!isPlayer ? [{ label: 'My Leagues', href: '/dashboard', icon: ICON_LEAGUES }] : []),
     { label: 'Messages', href: '/dashboard/messages', icon: ICON_MESSAGES },
     { label: 'Account', href: '/account', icon: ICON_ACCOUNT },
     ...(!isPlayer ? [{ label: 'Settings', href: '/settings', icon: ICON_SETTINGS }] : []),
