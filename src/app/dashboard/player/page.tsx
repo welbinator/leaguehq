@@ -122,7 +122,7 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
 function PlayerChatTab({ userId }: { userId?: string }) {
   const [rooms, setRooms] = useState<any[]>([]);
   const [activeRoom, setActiveRoom] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -147,7 +147,7 @@ function PlayerChatTab({ userId }: { userId?: string }) {
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="text-4xl mb-3">💬</div>
       <h3 className="text-lg font-bold text-white mb-1">No chats yet</h3>
-      <p className="text-gray-400 text-sm">Your league director hasn't enabled chat yet.</p>
+      <p className="text-gray-400 text-sm">You'll see chats here once you're added to a team or season.</p>
     </div>
   );
 
