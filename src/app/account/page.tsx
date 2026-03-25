@@ -150,45 +150,6 @@ export default function AccountPage() {
       <header className="bg-surface border-b border-white/[0.06] sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <span className="text-white font-bold text-sm">My Account</span>
-
-              {/* Push Notifications */}
-              <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/[0.08]">
-                <div>
-                  <p className="text-sm font-semibold text-white">Push Notifications</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Get notified about chat messages and league updates</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const newVal = !user?.pushNotificationsEnabled;
-                    await fetch('/api/account', {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ pushNotificationsEnabled: newVal }),
-                    });
-                    setUser((u: any) => ({ ...u, pushNotificationsEnabled: newVal }));
-                    if (!newVal) {
-                      // Unsubscribe this device
-                      if ('serviceWorker' in navigator) {
-                        const reg = await navigator.serviceWorker.ready;
-                        const sub = await reg.pushManager.getSubscription();
-                        if (sub) {
-                          await fetch('/api/push/unsubscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ endpoint: sub.endpoint }),
-                          });
-                          await sub.unsubscribe();
-                        }
-                      }
-                    }
-                  }}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${user?.pushNotificationsEnabled ? 'bg-accent' : 'bg-white/10'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${user?.pushNotificationsEnabled ? 'left-6' : 'left-1'}`} />
-                </button>
-              </div>
-
           <Link href={user?.role === 'PLAYER' || user?.role === 'CAPTAIN' ? '/dashboard/player' : '/dashboard'} className="text-sm text-gray-400 hover:text-white transition-colors">
             ← Dashboard
           </Link>
@@ -407,6 +368,47 @@ export default function AccountPage() {
             )}
           </>
         )}
+
+        {/* Settings */}
+        <Card>
+          <h2 className="text-xl font-bold text-white mb-1">Settings</h2>
+          <p className="text-gray-400 text-sm mb-5">Notification and account preferences</p>
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-sm font-semibold text-white">Push Notifications</p>
+              <p className="text-xs text-gray-500 mt-0.5">Get notified about chat messages and league updates</p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                const newVal = !user?.pushNotificationsEnabled;
+                await fetch('/api/account', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ pushNotificationsEnabled: newVal }),
+                });
+                setUser((u: any) => ({ ...u, pushNotificationsEnabled: newVal }));
+                if (!newVal) {
+                  if ('serviceWorker' in navigator) {
+                    const reg = await navigator.serviceWorker.ready;
+                    const sub = await reg.pushManager.getSubscription();
+                    if (sub) {
+                      await fetch('/api/push/unsubscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ endpoint: sub.endpoint }),
+                      });
+                      await sub.unsubscribe();
+                    }
+                  }
+                }
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${user?.pushNotificationsEnabled ? 'bg-accent' : 'bg-white/10'}`}
+            >
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${user?.pushNotificationsEnabled ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+        </Card>
 
       </div>
     </div>
