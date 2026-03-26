@@ -39,14 +39,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     prisma.game.count({ where: { leagueId: league.id, status: 'SCHEDULED', scheduledAt: { gte: now } } }),
   ]);
 
-  // Count team registrations (the actual registration model)
+  // Count from the Registration model (the canonical registration table)
   const seasons = await prisma.season.findMany({ where: { leagueId: league.id }, select: { id: true } });
   const seasonIds = seasons.map((s: any) => s.id);
-  // teamRegCount = unique teams (not rejected)
-  // playerRegCount = all registered individuals (captains + players), regardless of approval status
   const [teamRegCount, playerRegCount] = await Promise.all([
-    prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
-    prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds }, paymentStatus: { not: 'awaiting_payment' } } }),
+    // Unique teams with at least one approved registration in this league's seasons
+    prisma.registration.groupBy({
+      by: ['teamId'],
+      where: { leagueId: league.id, seasonId: { in: seasonIds }, status: 'APPROVED', teamId: { not: null } },
+    }).then(r => r.length),
+    // All approved individual registrations
+    prisma.registration.count({ where: { leagueId: league.id, seasonId: { in: seasonIds }, status: 'APPROVED' } }),
   ]);
 
   // Upcoming games
