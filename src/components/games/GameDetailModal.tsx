@@ -85,11 +85,11 @@ export function GameDetailModal({ game, isCaptain, onClose, onSaved, onTeamClick
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
       onClick={onClose}
     >
       <div
-        className="bg-[#1e293b] border border-white/[0.08] rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl overflow-hidden"
+        className="bg-[#1e293b] border border-white/[0.08] rounded-t-3xl sm:rounded-2xl w-full max-w-full sm:max-w-md shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}

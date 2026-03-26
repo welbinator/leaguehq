@@ -56,11 +56,11 @@ export function TeamProfileModal({ teamId, currentUserId, onClose }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
         onClick={onClose}
       >
         <div
-          className="bg-[#1e293b] border border-white/[0.08] rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
+          className="bg-[#1e293b] border border-white/[0.08] rounded-t-3xl sm:rounded-2xl w-full max-w-full sm:max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
           onClick={e => e.stopPropagation()}
         >
           {/* Drag handle */}
