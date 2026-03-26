@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const SPORT_EMOJI: Record<string, string> = {
   Soccer: '⚽', Basketball: '🏀', Baseball: '⚾', Football: '🏈',
@@ -12,6 +13,7 @@ const SPORT_EMOJI: Record<string, string> = {
 
 export function LeagueNav({ slug }: { slug: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [league, setLeague] = useState<any>(null);
   const [isDirector, setIsDirector] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,9 +41,10 @@ export function LeagueNav({ slug }: { slug: string }) {
   const tabs = [
     { label: 'Overview', href: `/leagues/${slug}` },
     { label: 'Teams', href: `/leagues/${slug}/teams` },
-    { label: 'Chat', href: `/leagues/${slug}/chat` },
+    // Players go to their dashboard for Chat & Schedule; directors stay on league pages
+    { label: 'Chat', href: isDirector ? `/leagues/${slug}/chat` : `/dashboard/player?tab=chat` },
     { label: 'Players', href: `/leagues/${slug}/players` },
-    { label: 'Schedule', href: `/leagues/${slug}/schedule` },
+    { label: 'Schedule', href: isDirector ? `/leagues/${slug}/schedule` : `/dashboard/player?tab=schedule` },
     { label: 'Standings', href: `/leagues/${slug}/standings` },
     { label: 'Seasons', href: `/leagues/${slug}/seasons` },
     ...(isDirector ? [{ label: 'Settings', href: `/leagues/${slug}/settings` }] : []),

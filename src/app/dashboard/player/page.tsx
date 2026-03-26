@@ -5,9 +5,9 @@ import { PushManager } from '@/components/push/PushManager';
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -182,12 +182,14 @@ function PlayerChatTab({ userId }: { userId?: string }) {
   );
 }
 
-export default function PlayerDashboard() {
+function PlayerDashboardInner() {
   const sessionResult = useSession();
   const session = sessionResult?.data;
   const status = sessionResult?.status;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as Tab) ?? 'chat';
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -589,5 +591,17 @@ export default function PlayerDashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PlayerDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <PlayerDashboardInner />
+    </Suspense>
   );
 }
