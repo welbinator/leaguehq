@@ -131,11 +131,10 @@ export default function DashboardPage() {
   const totalPlayers = leagues.reduce((sum: number, l: any) => sum + (l.playerRegCount ?? 0), 0);
 
   const role = (session?.user as any)?.role;
-  const isDirectorRole = role === 'LEAGUE_ADMIN' || role === 'SUPER_ADMIN';
   const isPlayerRole = role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE';
 
-  // Always show spinner while session is loading — never flash the director UI
-  if (status === 'loading' || !role) {
+  // Show spinner only while NextAuth is resolving the session
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -143,7 +142,17 @@ export default function DashboardPage() {
     );
   }
 
-  // Redirect non-directors immediately
+  // Not logged in at all — redirect to sign in
+  if (status === 'unauthenticated') {
+    router.replace('/auth/signin');
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-navy">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Redirect non-directors to player dashboard
   if (isPlayerRole) {
     router.replace('/dashboard/player');
     return (
