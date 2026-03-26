@@ -82,7 +82,9 @@ function PlayerScheduleTab({ userId, captainTeamIds = [] }: { userId?: string; c
     // Score display logic
     const scoreConfirmed = game.scoreStatus === 'CONFIRMED' && game.homeScore != null;
     const scoreDisputedOrPending = ['PENDING_HOME', 'PENDING_AWAY', 'DISPUTED'].includes(game.scoreStatus);
-    const canEnterScore = isPast && isCaptainOfGame && game.scoreStatus !== 'CONFIRMED';
+    // Captains can enter scores on any game their team played — past or upcoming
+    // (director may schedule a game that's already happened, or captain logs in late)
+    const canEnterScore = isCaptainOfGame && game.scoreStatus !== 'CONFIRMED';
 
     return (
       <div key={game.id} className="flex items-center gap-4 p-3 bg-navy rounded-xl border border-white/[0.06]">

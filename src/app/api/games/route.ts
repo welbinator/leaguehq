@@ -32,7 +32,14 @@ export async function GET(req: NextRequest) {
           { awayTeamId: { in: teamIds } },
         ],
       },
-      include: {
+      select: {
+        id: true, leagueId: true, seasonId: true, divisionId: true,
+        homeTeamId: true, awayTeamId: true, scheduledAt: true, location: true,
+        status: true, scheduleGroupId: true, notes: true,
+        homeScore: true, awayScore: true,
+        scoreStatus: true,
+        homeScoreHome: true, awayScoreHome: true,
+        homeScoreAway: true, awayScoreAway: true,
         homeTeam: { select: { id: true, name: true } },
         awayTeam: { select: { id: true, name: true } },
         season: { select: { id: true, name: true } },
@@ -66,7 +73,14 @@ export async function GET(req: NextRequest) {
         ],
       } : {}),
     },
-    include: {
+    select: {
+      id: true, leagueId: true, seasonId: true, divisionId: true,
+      homeTeamId: true, awayTeamId: true, scheduledAt: true, location: true,
+      status: true, scheduleGroupId: true, notes: true,
+      homeScore: true, awayScore: true,
+      scoreStatus: true,
+      homeScoreHome: true, awayScoreHome: true,
+      homeScoreAway: true, awayScoreAway: true,
       homeTeam: { select: { id: true, name: true } },
       awayTeam: { select: { id: true, name: true } },
       season: { select: { id: true, name: true } },
