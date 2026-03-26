@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ScoreEntryModal } from '@/components/games/ScoreEntryModal';
 import type { GameStatus } from '@/types';
 
 const statusVariant: Record<GameStatus, 'default' | 'success' | 'warning' | 'danger'> = {
@@ -54,6 +55,13 @@ interface GameRecord {
   scheduledAt: string;
   location?: string;
   status: GameStatus;
+  scoreStatus?: string;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  homeScoreHome?: number | null;
+  awayScoreHome?: number | null;
+  homeScoreAway?: number | null;
+  awayScoreAway?: number | null;
   scheduleGroupId?: string;
   notes?: string;
 }
@@ -468,6 +476,7 @@ function ExistingSchedules({ leagueId, refreshKey }: { leagueId: string; refresh
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [scoreGame, setScoreGame] = useState<GameRecord | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -536,8 +545,14 @@ function ExistingSchedules({ leagueId, refreshKey }: { leagueId: string; refresh
           <div className="divide-y divide-white/[0.04]">
             {groupGames.map(game => {
               const { date, time } = formatDateTime(game.scheduledAt);
+              const isDisputed = game.scoreStatus === 'DISPUTED';
+              const isConfirmed = game.scoreStatus === 'CONFIRMED';
+              const isPending = game.scoreStatus === 'PENDING_HOME' || game.scoreStatus === 'PENDING_AWAY';
               return (
-                <div key={game.id} className="flex items-center gap-4 px-4 py-3">
+                <div
+                  key={game.id}
+                  className={`flex items-center gap-4 px-4 py-3 ${isDisputed ? 'bg-yellow-500/5 border-l-2 border-yellow-500/40' : ''}`}
+                >
                   <div className="min-w-[130px] text-xs text-gray-500">
                     {date} <span className="text-gray-600">·</span> {time}
                   </div>
@@ -545,6 +560,36 @@ function ExistingSchedules({ leagueId, refreshKey }: { leagueId: string; refresh
                     {game.homeTeam.name} <span className="text-gray-500 font-normal">vs</span> {game.awayTeam.name}
                   </div>
                   {game.location && <div className="text-xs text-gray-500 hidden sm:block">{game.location}</div>}
+
+                  {/* Score display */}
+                  {isConfirmed && game.homeScore != null && (
+                    <span className="text-accent font-black text-sm">{game.homeScore}–{game.awayScore}</span>
+                  )}
+                  {isDisputed && (
+                    <div className="text-xs text-yellow-400 font-medium text-right leading-relaxed">
+                      ⚠️ Disputed<br />
+                      <span className="text-gray-400">
+                        {game.homeTeam.name}: {game.homeScoreHome}–{game.awayScoreHome}<br />
+                        {game.awayTeam.name}: {game.homeScoreAway}–{game.awayScoreAway}
+                      </span>
+                    </div>
+                  )}
+                  {isPending && (
+                    <span className="text-gray-500 text-xs">⏳ Awaiting</span>
+                  )}
+
+                  {/* Score entry button for director */}
+                  <button
+                    onClick={() => setScoreGame(game)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                      isDisputed
+                        ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    {isDisputed ? '🔧 Resolve' : isConfirmed ? '✏️ Edit' : '+ Score'}
+                  </button>
+
                   <Badge variant={statusVariant[game.status]}>{game.status.charAt(0) + game.status.slice(1).toLowerCase()}</Badge>
                 </div>
               );
@@ -556,10 +601,22 @@ function ExistingSchedules({ leagueId, refreshKey }: { leagueId: string; refresh
   };
 
   return (
-    <div className="space-y-3">
-      {groupEntries.map(([gid, gs]) => renderGameGroup(gs, gid))}
-      {ungrouped.length > 0 && renderGameGroup(ungrouped, '__ungrouped__')}
-    </div>
+    <>
+      {scoreGame && (
+        <ScoreEntryModal
+          game={scoreGame}
+          onClose={() => setScoreGame(null)}
+          onSaved={(updated) => {
+            setGames(prev => prev.map(g => g.id === updated.id ? { ...g, ...updated } : g));
+            setScoreGame(null);
+          }}
+        />
+      )}
+      <div className="space-y-3">
+        {groupEntries.map(([gid, gs]) => renderGameGroup(gs, gid))}
+        {ungrouped.length > 0 && renderGameGroup(ungrouped, '__ungrouped__')}
+      </div>
+    </>
   );
 }
 

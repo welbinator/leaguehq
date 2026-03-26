@@ -2,6 +2,7 @@
 
 import { ChatRoom } from '@/components/chat/ChatRoom';
 import { PushManager } from '@/components/push/PushManager';
+import { ScoreEntryModal } from '@/components/games/ScoreEntryModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,9 +35,10 @@ const US_STATES = [
 
 // ─── Player Schedule Tab Component ───────────────────────────────────────────
 
-function PlayerScheduleTab({ userId }: { userId?: string }) {
+function PlayerScheduleTab({ userId, captainTeamIds = [] }: { userId?: string; captainTeamIds?: string[] }) {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scoreGame, setScoreGame] = useState<any | null>(null);
 
   useEffect(() => {
     if (!userId) return; // stay in loading state until userId is available
@@ -73,6 +75,15 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
     const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
     const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
+    const isCaptainOfGame =
+      captainTeamIds.includes(game.homeTeam?.id) ||
+      captainTeamIds.includes(game.awayTeam?.id);
+
+    // Score display logic
+    const scoreConfirmed = game.scoreStatus === 'CONFIRMED' && game.homeScore != null;
+    const scoreDisputedOrPending = ['PENDING_HOME', 'PENDING_AWAY', 'DISPUTED'].includes(game.scoreStatus);
+    const canEnterScore = isPast && isCaptainOfGame && game.scoreStatus !== 'CONFIRMED';
+
     return (
       <div key={game.id} className="flex items-center gap-4 p-3 bg-navy rounded-xl border border-white/[0.06]">
         <div className="text-center w-16 flex-shrink-0">
@@ -90,14 +101,38 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
             {game.division && ` · ${game.division.name}`}
           </p>
         </div>
-        {game.status === 'COMPLETED' && game.homeScore != null && (
+        {/* Score / status display */}
+        {scoreConfirmed && (
           <span className="text-accent font-black text-sm">{game.homeScore}–{game.awayScore}</span>
+        )}
+        {scoreDisputedOrPending && !scoreConfirmed && (
+          <span className="text-yellow-400 text-xs font-medium">⏳ Pending</span>
+        )}
+        {/* Score entry button for captains */}
+        {canEnterScore && (
+          <button
+            onClick={() => setScoreGame(game)}
+            className="ml-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-medium hover:text-white hover:border-white/20 transition-colors whitespace-nowrap"
+          >
+            {game.scoreStatus === 'NONE' ? '+ Score' : '✏️ Edit'}
+          </button>
         )}
       </div>
     );
   };
 
   return (
+    <>
+      {scoreGame && (
+        <ScoreEntryModal
+          game={scoreGame}
+          onClose={() => setScoreGame(null)}
+          onSaved={(updated) => {
+            setGames(prev => prev.map(g => g.id === updated.id ? { ...g, ...updated } : g));
+            setScoreGame(null);
+          }}
+        />
+      )}
     <div className="space-y-5">
       {upcoming.length > 0 && (
         <Card>
@@ -116,6 +151,7 @@ function PlayerScheduleTab({ userId }: { userId?: string }) {
         </Card>
       )}
     </div>
+    </>
   );
 }
 
@@ -580,7 +616,10 @@ function PlayerDashboardInner() {
 
           {/* ── SCHEDULE TAB ────────────────────────────────────── */}
           {activeTab === 'schedule' && (
-            <PlayerScheduleTab userId={user?.id ?? (session?.user as any)?.id} />
+            <PlayerScheduleTab
+                userId={user?.id ?? (session?.user as any)?.id}
+                captainTeamIds={(user?.captainedTeams ?? []).map((t: any) => t.id)}
+              />
           )}
 
           {/* ── CHAT TAB ────────────────────────────────────────── */}

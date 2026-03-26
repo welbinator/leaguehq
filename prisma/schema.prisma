@@ -51,6 +51,14 @@ enum GameStatus {
   POSTPONED
 }
 
+enum ScoreStatus {
+  NONE
+  PENDING_HOME
+  PENDING_AWAY
+  CONFIRMED
+  DISPUTED
+}
+
 enum RegistrationStatus {
   PENDING
   APPROVED
@@ -290,6 +298,12 @@ model Game {
   homeScore   Int?
   awayScore   Int?
   status      GameStatus @default(SCHEDULED)
+  scoreStatus ScoreStatus @default(NONE)
+  // Captain score submissions (pending confirmation)
+  homeScoreHome   Int?   // submitted by home team captain
+  awayScoreHome   Int?
+  homeScoreAway   Int?   // submitted by away team captain
+  awayScoreAway   Int?
   refereeId   String?
   notes       String?
   scheduleGroupId String?
