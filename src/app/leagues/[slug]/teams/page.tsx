@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { TeamProfileModal } from '@/components/teams/TeamProfileModal';
 
 interface SeasonEnrollment {
   id: string;
@@ -36,12 +37,14 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const [leagueId, setLeagueId] = useState('');
   const [isDirector, setIsDirector] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [updatingEnrollment, setUpdatingEnrollment] = useState<string | null>(null);
+  const [profileTeamId, setProfileTeamId] = useState<string | null>(null);
 
   // Create team modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -70,6 +73,7 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
     const lid = leagueJson.data.id;
     setLeagueId(lid);
     const currentUserId = accountJson?.data?.id ?? null;
+    setCurrentUserId(currentUserId);
     setIsDirector(!!currentUserId && leagueJson.data.ownerId === currentUserId);
 
     const [teamsRes, seasonsRes] = await Promise.all([
@@ -202,7 +206,12 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-base font-bold text-white">{team.name}</h3>
+                        <button
+                          onClick={() => setProfileTeamId(team.id)}
+                          className="text-base font-bold text-white hover:text-accent transition-colors text-left"
+                        >
+                          {team.name}
+                        </button>
                         {activeEnrollments.length > 0 ? (
                           <span className="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">
                             {activeEnrollments.length} active season{activeEnrollments.length !== 1 ? 's' : ''}
@@ -383,6 +392,15 @@ export default function TeamsPage({ params }: { params: { slug: string } }) {
           )}
         </form>
       </Modal>
+
+      {/* Team Profile Modal */}
+      {profileTeamId && (
+        <TeamProfileModal
+          teamId={profileTeamId}
+          currentUserId={currentUserId ?? undefined}
+          onClose={() => setProfileTeamId(null)}
+        />
+      )}
     </div>
   );
 }
