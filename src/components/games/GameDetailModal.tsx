@@ -22,9 +22,10 @@ interface Game {
 
 interface Props {
   game: Game;
-  isCaptain: boolean;         // true = show score entry section
+  isCaptain: boolean;
   onClose: () => void;
   onSaved?: (updated: Game) => void;
+  onTeamClick?: (teamId: string) => void;
 }
 
 function formatGameDateTime(iso: string) {
@@ -38,7 +39,7 @@ function formatGameDateTime(iso: string) {
   return { date, time };
 }
 
-export function GameDetailModal({ game, isCaptain, onClose, onSaved }: Props) {
+export function GameDetailModal({ game, isCaptain, onClose, onSaved, onTeamClick }: Props) {
   const { date, time } = formatGameDateTime(game.scheduledAt);
 
   const isConfirmed = game.scoreStatus === 'CONFIRMED';
@@ -105,7 +106,16 @@ export function GameDetailModal({ game, isCaptain, onClose, onSaved }: Props) {
               <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-2">
                 <span className="text-xl">🏠</span>
               </div>
-              <p className="text-white font-bold text-sm leading-tight">{game.homeTeam.name}</p>
+              {onTeamClick ? (
+                <button
+                  onClick={() => onTeamClick(game.homeTeam.id)}
+                  className="text-white font-bold text-sm leading-tight hover:text-[#22c55e] transition-colors"
+                >
+                  {game.homeTeam.name}
+                </button>
+              ) : (
+                <p className="text-white font-bold text-sm leading-tight">{game.homeTeam.name}</p>
+              )}
               <p className="text-xs text-gray-500 mt-0.5">Home</p>
             </div>
 
@@ -134,7 +144,16 @@ export function GameDetailModal({ game, isCaptain, onClose, onSaved }: Props) {
               <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-2">
                 <span className="text-xl">✈️</span>
               </div>
-              <p className="text-white font-bold text-sm leading-tight">{game.awayTeam.name}</p>
+              {onTeamClick ? (
+                <button
+                  onClick={() => onTeamClick(game.awayTeam.id)}
+                  className="text-white font-bold text-sm leading-tight hover:text-[#22c55e] transition-colors"
+                >
+                  {game.awayTeam.name}
+                </button>
+              ) : (
+                <p className="text-white font-bold text-sm leading-tight">{game.awayTeam.name}</p>
+              )}
               <p className="text-xs text-gray-500 mt-0.5">Away</p>
             </div>
           </div>

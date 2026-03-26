@@ -3,6 +3,7 @@
 import { ChatRoom } from '@/components/chat/ChatRoom';
 import { PushManager } from '@/components/push/PushManager';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
+import { TeamProfileModal } from '@/components/teams/TeamProfileModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,7 @@ function PlayerScheduleTab({ userId, captainTeamIds = [] }: { userId?: string; c
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState<any | null>(null);
+  const [profileTeamId, setProfileTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return; // stay in loading state until userId is available
@@ -128,10 +130,21 @@ function PlayerScheduleTab({ userId, captainTeamIds = [] }: { userId?: string; c
             captainTeamIds.includes(selectedGame.awayTeam?.id)
           }
           onClose={() => setSelectedGame(null)}
+          onTeamClick={(teamId) => {
+            setSelectedGame(null);
+            setProfileTeamId(teamId);
+          }}
           onSaved={(updated) => {
             setGames((prev: any[]) => prev.map(g => g.id === updated.id ? { ...g, ...updated } : g));
             setSelectedGame((prev: any) => prev ? { ...prev, ...updated } : prev);
           }}
+        />
+      )}
+      {profileTeamId && (
+        <TeamProfileModal
+          teamId={profileTeamId}
+          currentUserId={userId}
+          onClose={() => setProfileTeamId(null)}
         />
       )}
       <div className="space-y-5">
