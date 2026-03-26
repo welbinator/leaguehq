@@ -98,68 +98,65 @@ export function GameDetailModal({ game, isCaptain, onClose, onSaved, onTeamClick
         </div>
 
         {/* ── Game header ── */}
-        <div className="px-6 pt-4 pb-5 border-b border-white/[0.06]">
-          {/* Teams */}
-          <div className="flex items-center justify-between gap-4 mb-4">
-            {/* Home team */}
-            <div className="flex-1 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">🏠</span>
+        <div className="px-5 pt-4 pb-5 border-b border-white/[0.06]">
+          {/* Score / VS centered */}
+          <div className="text-center mb-4">
+            {isConfirmed && game.homeScore != null ? (
+              <div className="text-4xl font-black text-white tracking-tight">
+                {game.homeScore}<span className="text-gray-600 mx-2">–</span>{game.awayScore}
               </div>
-              {onTeamClick ? (
-                <button
-                  onClick={() => onTeamClick(game.homeTeam.id)}
-                  className="text-white font-bold text-sm leading-tight hover:text-[#22c55e] transition-colors"
-                >
-                  {game.homeTeam.name}
-                </button>
-              ) : (
-                <p className="text-white font-bold text-sm leading-tight">{game.homeTeam.name}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-0.5">Home</p>
-            </div>
+            ) : (
+              <div className="text-2xl font-black text-gray-500">VS</div>
+            )}
+            {isConfirmed && <p className="text-xs text-[#22c55e] font-medium mt-0.5">Final</p>}
+            {isDisputed  && <p className="text-xs text-yellow-400 font-medium mt-0.5">⚠️ Disputed</p>}
+            {isPending   && <p className="text-xs text-gray-500 font-medium mt-0.5">⏳ Pending</p>}
+          </div>
 
-            {/* Score / VS */}
-            <div className="text-center flex-shrink-0">
-              {isConfirmed && game.homeScore != null ? (
-                <div className="text-3xl font-black text-white tracking-tight">
-                  {game.homeScore}<span className="text-gray-600 mx-1">–</span>{game.awayScore}
-                </div>
-              ) : (
-                <div className="text-2xl font-black text-gray-600">VS</div>
-              )}
-              {isConfirmed && (
-                <span className="text-xs text-[#22c55e] font-medium">Final</span>
-              )}
-              {isDisputed && (
-                <span className="text-xs text-yellow-400 font-medium">⚠️ Disputed</span>
-              )}
-              {isPending && (
-                <span className="text-xs text-gray-500 font-medium">⏳ Pending</span>
-              )}
-            </div>
-
-            {/* Away team */}
-            <div className="flex-1 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">✈️</span>
+          {/* Teams — two rows, full width, no clipping */}
+          <div className="space-y-2">
+            {/* Home */}
+            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-3 py-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 text-base">
+                🏠
               </div>
-              {onTeamClick ? (
-                <button
-                  onClick={() => onTeamClick(game.awayTeam.id)}
-                  className="text-white font-bold text-sm leading-tight hover:text-[#22c55e] transition-colors"
-                >
-                  {game.awayTeam.name}
-                </button>
-              ) : (
-                <p className="text-white font-bold text-sm leading-tight">{game.awayTeam.name}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-0.5">Away</p>
+              <div className="flex-1 min-w-0">
+                {onTeamClick ? (
+                  <button
+                    onClick={() => onTeamClick(game.homeTeam.id)}
+                    className="text-white font-bold text-sm hover:text-[#22c55e] transition-colors text-left w-full truncate"
+                  >
+                    {game.homeTeam.name}
+                  </button>
+                ) : (
+                  <p className="text-white font-bold text-sm truncate">{game.homeTeam.name}</p>
+                )}
+              </div>
+              <span className="text-xs text-gray-500 flex-shrink-0">Home</span>
+            </div>
+            {/* Away */}
+            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-3 py-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 text-base">
+                🚌
+              </div>
+              <div className="flex-1 min-w-0">
+                {onTeamClick ? (
+                  <button
+                    onClick={() => onTeamClick(game.awayTeam.id)}
+                    className="text-white font-bold text-sm hover:text-[#22c55e] transition-colors text-left w-full truncate"
+                  >
+                    {game.awayTeam.name}
+                  </button>
+                ) : (
+                  <p className="text-white font-bold text-sm truncate">{game.awayTeam.name}</p>
+                )}
+              </div>
+              <span className="text-xs text-gray-500 flex-shrink-0">Away</span>
             </div>
           </div>
 
           {/* Game details */}
-          <div className="space-y-2">
+          <div className="space-y-2 mt-4">
             <div className="flex items-center gap-2.5 text-sm">
               <span className="text-gray-500">📅</span>
               <span className="text-gray-300">{date}</span>
