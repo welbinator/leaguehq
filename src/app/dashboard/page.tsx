@@ -142,9 +142,9 @@ export default function DashboardPage() {
     );
   }
 
-  // Not logged in at all — redirect to sign in
-  if (status === 'unauthenticated') {
-    router.replace('/auth/signin');
+  // Redirect non-directors to player dashboard
+  if (isPlayerRole) {
+    router.replace('/dashboard/player');
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -152,9 +152,9 @@ export default function DashboardPage() {
     );
   }
 
-  // Redirect non-directors to player dashboard
-  if (isPlayerRole) {
-    router.replace('/dashboard/player');
+  // Not logged in at all — redirect to sign in
+  if (status === 'unauthenticated') {
+    router.replace('/auth/signin');
     return (
       <div className="flex items-center justify-center min-h-screen bg-navy">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
