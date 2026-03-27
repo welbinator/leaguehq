@@ -263,7 +263,6 @@ function PlayerDashboardInner() {
   }
 
   useEffect(() => {
-    if (status === 'unauthenticated') { router.push('/login'); return; }
     fetch('/api/account')
       .then(r => r.json())
       .then(json => {

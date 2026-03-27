@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { LeagueCard } from '@/components/league/LeagueCard';
 import { Button } from '@/components/ui/Button';
@@ -17,11 +15,9 @@ const SPORTS = [
 
 export const dynamic = 'force-dynamic';
 
+// Auth + role protection is handled entirely by middleware (src/middleware.ts).
+// This component can assume the user is an authenticated director.
 export default function DashboardPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
-  const router = useRouter();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthRevenue, setMonthRevenue] = useState(0);
@@ -57,15 +53,6 @@ export default function DashboardPage() {
       console.error('Failed to fetch subscription status', err);
     }
   }
-
-  // Redirect players/captains to their own dashboard
-  useEffect(() => {
-    if (status === 'loading') return;
-    const role = (session?.user as any)?.role;
-    if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
-      router.replace('/dashboard/player');
-    }
-  }, [session, status, router]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -130,37 +117,8 @@ export default function DashboardPage() {
   const totalTeams = leagues.reduce((sum: number, l: any) => sum + (l.teamRegCount ?? 0), 0);
   const totalPlayers = leagues.reduce((sum: number, l: any) => sum + (l.playerRegCount ?? 0), 0);
 
-  const role = (session?.user as any)?.role;
-  const isPlayerRole = role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE';
-
-  // Show spinner only while NextAuth is resolving the session
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-navy">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Redirect non-directors to player dashboard
-  if (isPlayerRole) {
-    router.replace('/dashboard/player');
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-navy">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Not logged in at all — redirect to sign in
-  if (status === 'unauthenticated') {
-    router.replace('/auth/signin');
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-navy">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  // Middleware guarantees this page is only reached by authenticated directors.
+  // No role checks needed here.
 
   return (
     <div className="flex min-h-screen bg-navy">
