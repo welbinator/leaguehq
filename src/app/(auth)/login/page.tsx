@@ -36,15 +36,8 @@ function LoginForm() {
         if (next) {
           router.push(next);
         } else {
-          // Route based on role
-          const res = await fetch('/api/account');
-          const json = await res.json();
-          const role = json.data?.role;
-          if (role === 'PLAYER' || role === 'CAPTAIN' || role === 'COACH' || role === 'REFEREE') {
-            router.push('/dashboard/player');
-          } else {
-            router.push('/dashboard');
-          }
+          // Always go to league picker — it handles single-league auto-redirect
+          router.push('/my-leagues');
         }
         router.refresh();
       }

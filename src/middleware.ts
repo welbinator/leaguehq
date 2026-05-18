@@ -21,6 +21,12 @@ const PROTECTED: {
   allow: (role: string | undefined) => boolean;
   redirect: string;
 }[] = [
+  // League picker — must be logged in
+  {
+    prefix: '/my-leagues',
+    allow: (role) => !!role,
+    redirect: '/auth/signin',
+  },
   // Director-only routes → players get sent to /dashboard/player
   {
     prefix: '/dashboard',
@@ -75,6 +81,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/my-leagues',
     '/dashboard',
     '/dashboard/:path*',
     '/leagues/:path*',
