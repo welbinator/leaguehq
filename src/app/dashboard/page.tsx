@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { LeagueCard } from '@/components/league/LeagueCard';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -123,8 +124,9 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-navy">
       <Sidebar />
-
-      <main className="flex-1 ml-14 md:ml-64 p-4 md:p-8">
+      <div className="flex-1 ml-14 md:ml-64 flex flex-col">
+        <DashboardHeader variant="director" />
+        <main className="flex-1 p-4 md:p-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -242,6 +244,8 @@ export default function DashboardPage() {
           </p>
         </form>
       </Modal>
+        </main>
+      </div>
     </div>
   );
 }
