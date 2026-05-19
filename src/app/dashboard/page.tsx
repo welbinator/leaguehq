@@ -204,7 +204,6 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-      </main>
 
       {/* Create League Modal */}
       <Modal
