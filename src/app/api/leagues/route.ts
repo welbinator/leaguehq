@@ -35,12 +35,17 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'desc' },
   });
 
-  // Attach TeamRegistration counts per league
+  // Count from canonical Registration table
   const enriched = await Promise.all(leagues.map(async (league: any) => {
     const seasonIds = league.seasons.map((s: any) => s.id);
     const [teamRegCount, playerRegCount] = await Promise.all([
-      prisma.teamRegistration.count({ where: { seasonId: { in: seasonIds }, status: { not: 'REJECTED' } } }),
-      prisma.playerRegistration.count({ where: { seasonId: { in: seasonIds }, paymentStatus: { not: 'awaiting_payment' } } }),
+      // Unique teams with at least one approved registration
+      prisma.registration.groupBy({
+        by: ['teamId'],
+        where: { leagueId: league.id, seasonId: { in: seasonIds }, status: 'APPROVED', teamId: { not: null } },
+      }).then((r: any[]) => r.length),
+      // All approved player registrations
+      prisma.registration.count({ where: { leagueId: league.id, seasonId: { in: seasonIds }, status: 'APPROVED' } }),
     ]);
     return { ...league, teamRegCount, playerRegCount };
   }));

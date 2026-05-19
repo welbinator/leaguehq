@@ -1,5 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+// GET /api/registrations?leagueId=...&seasonId=...
+// Returns all registrations for a league, used by the players page
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const leagueId = req.nextUrl.searchParams.get('leagueId');
+  const seasonId = req.nextUrl.searchParams.get('seasonId');
+  if (!leagueId) return NextResponse.json({ error: 'leagueId required' }, { status: 400 });
+
+  const where: any = { leagueId };
+  if (seasonId) where.seasonId = seasonId;
+
+  const registrations = await prisma.registration.findMany({
+    where,
+    include: {
+      user: { select: { id: true, name: true, email: true, phone: true, firstName: true, lastName: true } },
+      team: { select: { id: true, name: true } },
+      season: { select: { id: true, name: true, status: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return NextResponse.json({ data: registrations });
+}
+
 
 // Plan limits: max active/upcoming players across all leagues owned by the director (null = unlimited)
 const PLAN_LIMITS: Record<string, number | null> = {

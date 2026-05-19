@@ -69,68 +69,45 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
     const currentUserId = accountJson?.data?.id ?? null;
     setIsDirector(!!currentUserId && leagueJson.data.ownerId === currentUserId);
 
-    const [regRes, playerRes, teamRes] = await Promise.all([
-      fetch(`/api/team-registrations?leagueId=${lid}`),
-      fetch(`/api/player-registrations?leagueId=${lid}`),
-      fetch(`/api/team-registrations?leagueId=${lid}`),
+    // Use canonical Registration table
+    const [regRes, seasonsRes, teamsRes] = await Promise.all([
+      fetch(`/api/registrations?leagueId=${lid}`),
+      fetch(`/api/seasons?leagueId=${lid}`),
+      fetch(`/api/leagues/${slug}/teams-list`).catch(() => ({ json: async () => ({ data: [] }) })),
     ]);
-    const [regJson, playerJson] = await Promise.all([regRes.json(), playerRes.json()]);
-    const teamJson = await teamRes.json();
+    const [regJson, seasonsJson] = await Promise.all([regRes.json(), seasonsRes.json()]);
 
-    // Build team options for the assign-team dropdown
-    setTeams((teamJson.data ?? []).map((t: any) => ({
-      id: t.id,
-      teamName: t.teamName,
-      seasonId: t.season.id,
-    })));
-
-    // Build season status map from league data
-    const seasonsRes = await fetch(`/api/seasons?leagueId=${lid}`);
-    const seasonsJson = await seasonsRes.json();
-    const seasonStatusMap: Record<string, string> = {};
-    const seasonList: { id: string; name: string; status: string }[] = [];
-    for (const s of (seasonsJson.data ?? [])) {
-      seasonStatusMap[s.id] = s.status;
-      seasonList.push({ id: s.id, name: s.name, status: s.status });
-    }
+    // Build season list
+    const seasonList: { id: string; name: string; status: string }[] = (seasonsJson.data ?? []).map((s: any) => ({
+      id: s.id, name: s.name, status: s.status,
+    }));
     setSeasons(seasonList);
 
-    const captains: PlayerRow[] = (regJson.data ?? []).map((r: any) => ({
-      id: r.id,
-      type: 'captain' as const,
-      name: r.captainName,
-      email: r.captainEmail,
-      phone: r.captainPhone,
-      role: 'Captain' as const,
-      teamName: r.teamName,
-      teamRegistrationId: r.id,
-      division: r.seasonDivision?.division?.name ?? null,
-      season: r.season.name,
-      seasonId: r.season.id,
-      seasonStatus: seasonStatusMap[r.season.id] ?? 'UPCOMING',
-      createdAt: r.createdAt,
-    }));
+    // Build team options from registrations (unique teams)
+    const teamMap = new Map<string, TeamOption>();
+    for (const r of (regJson.data ?? [])) {
+      if (r.team) teamMap.set(r.team.id, { id: r.team.id, teamName: r.team.name, seasonId: r.seasonId });
+    }
+    setTeams(Array.from(teamMap.values()));
 
-    const playerMembers: PlayerRow[] = (playerJson.data ?? []).map((r: any) => ({
+    // Map registrations to PlayerRow
+    const rows: PlayerRow[] = (regJson.data ?? []).map((r: any) => ({
       id: r.id,
       type: 'player' as const,
-      name: r.playerName,
-      email: r.playerEmail,
-      phone: r.playerPhone ?? null,
+      name: r.user?.name ?? r.user?.email ?? 'Unknown',
+      email: r.user?.email ?? '',
+      phone: r.user?.phone ?? null,
       role: 'Player' as const,
-      teamName: r.teamRegistration?.teamName ?? r.team?.name ?? 'No Team',
-      teamRegistrationId: r.teamRegistration?.id ?? null,
-      division: r.seasonDivision?.division?.name ?? null,
-      season: r.season.name,
-      seasonId: r.season.id,
-      seasonStatus: seasonStatusMap[r.season.id] ?? 'UPCOMING',
+      teamName: r.team?.name ?? 'No Team',
+      teamRegistrationId: r.teamId ?? null,
+      division: null,
+      season: r.season?.name ?? '',
+      seasonId: r.season?.id ?? '',
+      seasonStatus: r.season?.status ?? 'UPCOMING',
       createdAt: r.createdAt,
-    }));
+    })).sort((a: PlayerRow, b: PlayerRow) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const all = [...captains, ...playerMembers].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setPlayers(all);
+    setPlayers(rows);
     setLoading(false);
   }
 
@@ -151,29 +128,14 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
     setSaving(true);
     setSaveError('');
     try {
-      let res: Response;
-      if (editing.type === 'captain') {
-        res = await fetch(`/api/team-registrations?id=${editing.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            captainName: editName,
-            captainEmail: editEmail,
-            captainPhone: editPhone || null,
-          }),
-        });
-      } else {
-        res = await fetch(`/api/player-registrations?id=${editing.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            playerName: editName,
-            playerEmail: editEmail,
-            playerPhone: editPhone || null,
-            teamRegistrationId: editTeamId || null,
-          }),
-        });
-      }
+      // All registrations use the same Registration model now
+      const res = await fetch(`/api/registrations/${editing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: editTeamId || null,
+        }),
+      });
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error ?? 'Save failed'); return; }
       setEditing(null);
