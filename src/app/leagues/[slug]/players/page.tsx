@@ -40,7 +40,7 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [seasonFilter, setSeasonFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [seasons, setSeasons] = useState<{ id: string; name: string; status: string }[]>([]);
   const [leagueId, setLeagueId] = useState('');
   const [isDirector, setIsDirector] = useState(false);
@@ -133,6 +133,9 @@ export default function PlayersPage({ params }: { params: { slug: string } }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: editName,
+          email: editEmail,
+          phone: editPhone || null,
           teamId: editTeamId || null,
         }),
       });
