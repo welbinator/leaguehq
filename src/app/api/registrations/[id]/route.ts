@@ -12,6 +12,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json();
   const { teamId, status, notes, name, email, phone } = body;
 
+  const registration = await prisma.registration.findUnique({
+    where: { id },
+    select: { leagueId: true, userId: true },
+  });
+  if (!registration) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const league = await prisma.league.findUnique({ where: { id: registration.leagueId }, select: { ownerId: true } });
+  if (league?.ownerId !== (session.user as any).id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // Update user profile fields if provided
   if (name || email || phone !== undefined) {
     const nameParts = name?.trim().split(' ') ?? [];
