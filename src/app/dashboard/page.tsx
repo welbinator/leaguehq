@@ -245,7 +245,7 @@ export default function DashboardPage() {
           </p>
         </form>
       </Modal>
-        </main>
+      </main>
       </div>
     </div>
   );
