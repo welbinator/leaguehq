@@ -27,7 +27,9 @@ type LeagueEntry = {
 };
 
 export default function LeaguePickerPage() {
-  const { data: session, status } = useSession();
+  const sessionData = useSession();
+  const session = sessionData?.data;
+  const status = sessionData?.status;
   const router = useRouter();
   const [leagues, setLeagues] = useState<LeagueEntry[]>([]);
   const [loading, setLoading] = useState(true);
