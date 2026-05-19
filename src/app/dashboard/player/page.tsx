@@ -11,6 +11,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { LeagueNav } from '@/components/league/LeagueNav';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -345,7 +346,9 @@ function PlayerDashboardInner() {
       <PushManager />
       <Sidebar />
 
-      <main className="flex-1 ml-14 md:ml-64 p-4 md:p-8">
+      <div className="flex-1 ml-14 md:ml-64 flex flex-col">
+        <LeagueNav />
+        <main className="flex-1 p-4 md:p-8">
         <div className="max-w-3xl mx-auto">
 
           {toast && (
@@ -641,7 +644,8 @@ function PlayerDashboardInner() {
           )}
 
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

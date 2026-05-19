@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { getActiveLeague, setActiveLeague, type ActiveLeague } from '@/lib/activeLeague';
 
 const SPORT_EMOJI: Record<string, string> = {
   Soccer: '⚽', Basketball: '🏀', Baseball: '⚾', Football: '🏈',
@@ -11,46 +11,100 @@ const SPORT_EMOJI: Record<string, string> = {
   Lacrosse: '🥍', Rugby: '🏉', Other: '🏆',
 };
 
-export function LeagueNav({ slug }: { slug: string }) {
+type LeagueNavLeague = {
+  id: string;
+  slug: string;
+  name: string;
+  sport: string;
+  logoUrl?: string | null;
+  ownerId?: string;
+  isDirector?: boolean;
+  isPlayer?: boolean;
+};
+
+interface LeagueNavProps {
+  /** Pass a slug when rendering on /leagues/[slug] pages */
+  slug?: string;
+}
+
+export function LeagueNav({ slug: slugProp }: LeagueNavProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [league, setLeague] = useState<any>(null);
+  const [league, setLeague] = useState<LeagueNavLeague | null>(null);
   const [isDirector, setIsDirector] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [allLeagues, setAllLeagues] = useState<ActiveLeague[]>([]);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  // Determine the slug to use: prop → active league in localStorage
+  const slug = slugProp ?? (typeof window !== 'undefined' ? getActiveLeague()?.slug : undefined);
 
   useEffect(() => {
+    if (!slug) return;
+
     Promise.all([
       fetch(`/api/leagues/${slug}`).then(r => r.json()),
       fetch('/api/account').then(r => r.json()),
-    ]).then(([leagueJson, accountJson]) => {
+      fetch('/api/my-leagues').then(r => r.json()),
+    ]).then(([leagueJson, accountJson, myLeaguesJson]) => {
       if (!leagueJson.error) setLeague(leagueJson.data);
       const uid = accountJson?.data?.id ?? null;
       if (uid && leagueJson.data?.ownerId === uid) setIsDirector(true);
+      // Build all-leagues list for switcher
+      const leagues: ActiveLeague[] = (myLeaguesJson.data ?? []).map((l: any) => ({
+        id: l.id,
+        slug: l.slug,
+        name: l.name,
+        sport: l.sport,
+        logoUrl: l.logoUrl,
+        isDirector: l.isDirector,
+        isPlayer: l.isPlayer,
+      }));
+      setAllLeagues(leagues);
     }).catch(() => {});
   }, [slug]);
 
   // Close menu on route change
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  useEffect(() => { setMenuOpen(false); setSwitcherOpen(false); }, [pathname]);
 
-  // Prevent body scroll when menu open
+  // Close switcher on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Prevent body scroll when mobile menu open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
 
-  const tabs = [
+  function switchLeague(l: ActiveLeague) {
+    setActiveLeague(l);
+    setSwitcherOpen(false);
+    setMenuOpen(false);
+    router.push(l.isDirector ? '/dashboard' : '/dashboard/player');
+  }
+
+  const tabs = slug ? [
     { label: 'Overview', href: `/leagues/${slug}` },
     { label: 'Teams', href: `/leagues/${slug}/teams` },
-    // Players go to their dashboard for Chat & Schedule; directors stay on league pages
     { label: 'Chat', href: isDirector ? `/leagues/${slug}/chat` : `/dashboard/player?tab=chat` },
     { label: 'Players', href: `/leagues/${slug}/players` },
     { label: 'Schedule', href: isDirector ? `/leagues/${slug}/schedule` : `/dashboard/player?tab=schedule` },
     { label: 'Standings', href: `/leagues/${slug}/standings` },
     { label: 'Seasons', href: `/leagues/${slug}/seasons` },
     ...(isDirector ? [{ label: 'Settings', href: `/leagues/${slug}/settings` }] : []),
-  ];
+  ] : [];
 
   const emoji = league ? (SPORT_EMOJI[league.sport] ?? '🏆') : '🏆';
+  const multiLeague = allLeagues.length > 1;
 
   return (
     <>
@@ -58,16 +112,53 @@ export function LeagueNav({ slug }: { slug: string }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
 
-            {/* Left: league name */}
-            <Link href={`/leagues/${slug}`} className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xl leading-none">{emoji}</span>
-              <span className="text-white font-bold text-sm truncate max-w-[160px] sm:max-w-xs">
-                {league?.name ?? '…'}
-              </span>
-            </Link>
+            {/* Left: league name + optional switcher */}
+            <div className="flex items-center gap-1 min-w-0" ref={switcherRef}>
+              <Link href={slug ? `/leagues/${slug}` : '/dashboard'} className="flex items-center gap-2.5 min-w-0">
+                <span className="text-xl leading-none">{emoji}</span>
+                <span className="text-white font-bold text-sm truncate max-w-[140px] sm:max-w-xs">
+                  {league?.name ?? '…'}
+                </span>
+              </Link>
+
+              {/* League switcher chevron */}
+              {multiLeague && (
+                <div className="relative">
+                  <button
+                    onClick={() => setSwitcherOpen(o => !o)}
+                    className="ml-1 p-1 text-gray-500 hover:text-white transition-colors rounded"
+                    aria-label="Switch league"
+                  >
+                    <svg className={`w-4 h-4 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {switcherOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-64 bg-surface border border-white/[0.1] rounded-xl shadow-xl overflow-hidden z-50">
+                      <p className="text-xs text-gray-500 px-4 pt-3 pb-1 font-medium uppercase tracking-wide">Switch League</p>
+                      {allLeagues.map(l => (
+                        <button
+                          key={l.id}
+                          onClick={() => switchLeague(l)}
+                          className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.05] transition-colors ${l.slug === slug ? 'text-accent' : 'text-white'}`}
+                        >
+                          <span className="text-lg">{SPORT_EMOJI[l.sport] ?? '🏆'}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{l.name}</p>
+                            <p className="text-xs text-gray-500">{l.isDirector ? 'Director' : 'Player'}</p>
+                          </div>
+                          {l.slug === slug && <span className="text-accent text-xs">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Desktop tab nav */}
-            <nav className="hidden md:flex items-center gap-0.5">
+            <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto">
               {tabs.map(tab => {
                 const isActive = pathname === tab.href;
                 return (
@@ -101,10 +192,7 @@ export function LeagueNav({ slug }: { slug: string }) {
 
       {/* Mobile backdrop */}
       {menuOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/60 z-40"
-          onClick={() => setMenuOpen(false)}
-        />
+        <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setMenuOpen(false)} />
       )}
 
       {/* Mobile slide-out drawer */}
@@ -123,7 +211,7 @@ export function LeagueNav({ slug }: { slug: string }) {
         </div>
 
         {/* Drawer nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {tabs.map(tab => {
             const isActive = pathname === tab.href;
             return (
@@ -135,6 +223,23 @@ export function LeagueNav({ slug }: { slug: string }) {
               </Link>
             );
           })}
+
+          {/* League switcher in mobile drawer */}
+          {multiLeague && (
+            <div className="pt-2 border-t border-white/[0.06] mt-2">
+              <p className="text-xs text-gray-500 px-4 py-2 font-medium uppercase tracking-wide">Switch League</p>
+              {allLeagues.map(l => (
+                <button key={l.id} onClick={() => switchLeague(l)}
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    l.slug === slug ? 'text-accent' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}>
+                  <span>{SPORT_EMOJI[l.sport] ?? '🏆'}</span>
+                  <span className="truncate">{l.name}</span>
+                  {l.slug === slug && <span className="ml-auto text-xs">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
 
         {/* Back to dashboard */}
