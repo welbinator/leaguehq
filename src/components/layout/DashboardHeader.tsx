@@ -61,7 +61,7 @@ export function DashboardHeader({ variant = 'director' }: DashboardHeaderProps) 
                 );
               })}
               <button
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={() => signOut({ callbackUrl: '/login' })}
                 className="ml-3 pl-3 border-l border-white/10 text-sm text-gray-500 hover:text-gray-300 whitespace-nowrap transition-colors"
               >
                 Sign out
@@ -127,7 +127,7 @@ export function DashboardHeader({ variant = 'director' }: DashboardHeaderProps) 
         {/* Sign out */}
         <div className="px-3 py-4 border-t border-white/[0.06]">
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => signOut({ callbackUrl: '/login' })}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

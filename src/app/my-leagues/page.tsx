@@ -36,7 +36,7 @@ export default function LeaguePickerPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/auth/signin');
+      router.replace('/login');
       return;
     }
     if (status !== 'authenticated') return;
@@ -81,7 +81,7 @@ export default function LeaguePickerPage() {
           <a href="/pricing" className="inline-block bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold px-6 py-3 rounded-xl transition-colors">
             Get Started →
           </a>
-          <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} className="block mx-auto mt-4 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <button onClick={() => signOut({ callbackUrl: '/login' })} className="block mx-auto mt-4 text-sm text-gray-500 hover:text-gray-300 transition-colors">
             Sign out
           </button>
         </div>
@@ -149,7 +149,7 @@ export default function LeaguePickerPage() {
         </div>
 
         <div className="text-center mt-8">
-          <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
             Sign out
           </button>
         </div>

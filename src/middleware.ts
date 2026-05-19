@@ -25,7 +25,7 @@ const PROTECTED: {
   {
     prefix: '/my-leagues',
     allow: (role) => !!role,
-    redirect: '/auth/signin',
+    redirect: '/login',
   },
   // Director-only routes → players get sent to /dashboard/player
   {
@@ -43,7 +43,7 @@ const PROTECTED: {
   {
     prefix: '/leagues',
     allow: (role) => !!role,
-    redirect: '/auth/signin',
+    redirect: '/login',
   },
 ];
 
@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   // Not logged in at all
   if (!token) {
-    return NextResponse.redirect(new URL('/auth/signin', request.url));
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   const role = (token as any).role as string | undefined;

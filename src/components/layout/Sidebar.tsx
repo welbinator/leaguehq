@@ -87,7 +87,7 @@ export function Sidebar() {
         {/* Bottom: sign out + expand toggle */}
         <div className="px-1.5 py-3 border-t border-white/[0.06] space-y-0.5">
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => signOut({ callbackUrl: '/login' })}
             title="Sign Out"
             className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150 overflow-hidden"
           >
